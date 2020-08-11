@@ -1,0 +1,14 @@
+{{- if .Values.updater.enabled }}
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: vpa-updater
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: vpa-updater
+  updatePolicy:
+    updateMode: "Auto"
+{{- end }}

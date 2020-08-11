@@ -3,13 +3,14 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
-  labels:
-    app: vpa-exporter
-{{ toYaml .Values.labels | indent 4 }}
   name: vpa-exporter
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: vpa-exporter
+{{ toYaml .Values.deploymentLabels | indent 4 }}
 spec:
   replicas: {{ .Values.exporter.replicas }}
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       app: vpa-exporter
@@ -35,6 +36,7 @@ spec:
       containers:
       - command:
         - /usr/local/bin/vpa-exporter
+        - --port={{ .Values.exporter.port }}
         image: {{ index .Values.global.images "vpa-exporter" }}
         imagePullPolicy: IfNotPresent
         name: exporter
@@ -51,17 +53,15 @@ spec:
 {{- end }}
         ports:
         - name: metrics
-          containerPort: 9570
+          containerPort: {{ .Values.exporter.port }}
           protocol: TCP
         resources:
           requests:
-            cpu: 50m
-            memory: 200Mi
-{{ if not .Values.exporter.enableVPA }}
+            cpu: 30m
+            memory: 50Mi
           limits:
-            cpu: 500m
-            memory: 1Gi
-{{ end }}
+            cpu: 120m
+            memory: 200Mi
 {{- if not .Values.exporter.enableServiceAccount }}
       volumes:
       - name: vpa-exporter

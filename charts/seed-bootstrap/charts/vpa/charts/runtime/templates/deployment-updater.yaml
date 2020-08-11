@@ -6,9 +6,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: vpa-updater
-{{ toYaml .Values.labels | indent 4 }}
+{{ toYaml .Values.deploymentLabels | indent 4 }}
 spec:
   replicas: {{ .Values.updater.replicas }}
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       app: vpa-updater
@@ -59,11 +60,11 @@ spec:
 {{- end }}
         resources:
           limits:
-            cpu: 200m
-            memory: 1000Mi
-          requests:
-            cpu: 50m
+            cpu: 120m
             memory: 500Mi
+          requests:
+            cpu: 30m
+            memory: 200Mi
         ports:
         - containerPort: 8080
 {{- if not .Values.updater.enableServiceAccount }}

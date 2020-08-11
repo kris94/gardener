@@ -17,7 +17,7 @@ require (
 	github.com/go-openapi/spec v0.19.3
 	github.com/gobuffalo/packr v1.30.1
 	github.com/gogo/protobuf v1.3.1
-	github.com/golang/mock v1.4.3
+	github.com/golang/mock v1.4.4-0.20200731163441-8734ec565a4d
 	github.com/googleapis/gnostic v0.3.1
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/huandu/xstrings v1.3.1
@@ -32,6 +32,7 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.1
+	github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
 	go.uber.org/zap v1.13.0
 	golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
@@ -72,4 +73,5 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.17.9
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.17.9
+	k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20200807191151-9232ec702af2
 )

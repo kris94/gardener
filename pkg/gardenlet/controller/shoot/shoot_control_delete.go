@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -190,6 +189,10 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			Name: "Ensuring that ShootState exists",
 			Fn:   flow.TaskFn(botanist.EnsureShootStateExists).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
+		ensureShootClusterIdentity = g.Add(flow.Task{
+			Name: "Ensuring Shoot cluster identity",
+			Fn:   flow.TaskFn(botanist.EnsureClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
 
 		// We need to ensure that the deployed cloud provider secret is up-to-date. In case it has changed then we
 		// need to redeploy the cloud provider config (containing the secrets for some cloud providers) as well as
@@ -220,7 +223,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying Shoot control plane",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded && !shootNamespaceInDeletion),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, ensureShootClusterIdentity),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
 			Name:         "Waiting until Shoot control plane has been reconciled",
@@ -230,7 +233,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		wakeUpControlPlane = g.Add(flow.Task{
 			Name:         "Waking up control plane to ensure proper cleanup of resources",
 			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(waitUntilControlPlaneReady, ensureShootClusterIdentity),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
@@ -239,7 +242,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		})
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
-			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Fn:           flow.TaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
 		})
 
@@ -412,8 +415,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		})
 
 		destroyNginxIngressDNSRecord = g.Add(flow.Task{
-			Name:         "Destroying ingress DNS record",
-			Fn:           flow.TaskFn(component.OpDestroyAndWait(botanist.Shoot.Components.Extensions.DNS.NginxEntry).Destroy),
+			Name:         "Destroying nginx ingress DNS record",
+			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{
@@ -427,8 +430,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 			Dependencies: flow.NewTaskIDs(destroyInfrastructure),
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Destroying external DNS entry",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.ExternalEntry).Destroy),
+			Name:         "Destroying external domain DNS record",
+			Fn:           flow.TaskFn(botanist.DestroyExternalDNS),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 
@@ -443,12 +446,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1bet
 		)
 
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
-			Name:         "Destroying internal DNS entry",
-			Fn:           flow.TaskFn(component.OpWaiter(botanist.Shoot.Components.Extensions.DNS.InternalEntry).Destroy),
+			Name:         "Destroying internal domain DNS record",
+			Fn:           flow.TaskFn(botanist.DestroyInternalDNS),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		deleteDNSProviders = g.Add(flow.Task{
-			Name:         "Deleting DNS providers",
+			Name:         "Deleting additional DNS providers",
 			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
 			Dependencies: flow.NewTaskIDs(destroyInternalDomainDNSRecord),
 		})

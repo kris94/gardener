@@ -98,6 +98,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Machine":                               schema_pkg_apis_core_v1alpha1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineControllerManagerSettings":      schema_pkg_apis_core_v1alpha1_MachineControllerManagerSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage":                          schema_pkg_apis_core_v1alpha1_MachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImageVersion":                   schema_pkg_apis_core_v1alpha1_MachineImageVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType":                           schema_pkg_apis_core_v1alpha1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineTypeStorage":                    schema_pkg_apis_core_v1alpha1_MachineTypeStorage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance":                           schema_pkg_apis_core_v1alpha1_Maintenance(ref),
@@ -125,6 +126,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.QuotaSpec":                             schema_pkg_apis_core_v1alpha1_QuotaSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region":                                schema_pkg_apis_core_v1alpha1_Region(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceData":                          schema_pkg_apis_core_v1alpha1_ResourceData(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceWatchCacheSize":                schema_pkg_apis_core_v1alpha1_ResourceWatchCacheSize(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBinding":                         schema_pkg_apis_core_v1alpha1_SecretBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBindingList":                     schema_pkg_apis_core_v1alpha1_SecretBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Seed":                                  schema_pkg_apis_core_v1alpha1_Seed(ref),
@@ -133,6 +135,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedList":                              schema_pkg_apis_core_v1alpha1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks":                          schema_pkg_apis_core_v1alpha1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider":                          schema_pkg_apis_core_v1alpha1_SeedProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector":                          schema_pkg_apis_core_v1alpha1_SeedSelector(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation":  schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices":       schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling":                 schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref),
@@ -158,6 +161,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.VerticalPodAutoscaler":                 schema_pkg_apis_core_v1alpha1_VerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Volume":                                schema_pkg_apis_core_v1alpha1_Volume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType":                            schema_pkg_apis_core_v1alpha1_VolumeType(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes":                       schema_pkg_apis_core_v1alpha1_WatchCacheSizes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Worker":                                schema_pkg_apis_core_v1alpha1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerKubernetes":                      schema_pkg_apis_core_v1alpha1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.WorkerSystemComponents":                schema_pkg_apis_core_v1alpha1_WorkerSystemComponents(ref),
@@ -225,6 +229,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Machine":                                schema_pkg_apis_core_v1beta1_Machine(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings":       schema_pkg_apis_core_v1beta1_MachineControllerManagerSettings(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage":                           schema_pkg_apis_core_v1beta1_MachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion":                    schema_pkg_apis_core_v1beta1_MachineImageVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType":                            schema_pkg_apis_core_v1beta1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineTypeStorage":                     schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance":                            schema_pkg_apis_core_v1beta1_Maintenance(ref),
@@ -251,6 +256,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaList":                              schema_pkg_apis_core_v1beta1_QuotaList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec":                              schema_pkg_apis_core_v1beta1_QuotaSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Region":                                 schema_pkg_apis_core_v1beta1_Region(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize":                 schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBinding":                          schema_pkg_apis_core_v1beta1_SecretBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingList":                      schema_pkg_apis_core_v1beta1_SecretBindingList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Seed":                                   schema_pkg_apis_core_v1beta1_Seed(ref),
@@ -259,6 +265,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedList":                               schema_pkg_apis_core_v1beta1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                           schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                           schema_pkg_apis_core_v1beta1_SeedProvider(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector":                           schema_pkg_apis_core_v1beta1_SeedSelector(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":   schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices":        schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                  schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
@@ -281,6 +288,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VerticalPodAutoscaler":                  schema_pkg_apis_core_v1beta1_VerticalPodAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Volume":                                 schema_pkg_apis_core_v1beta1_Volume(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType":                             schema_pkg_apis_core_v1beta1_VolumeType(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes":                        schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker":                                 schema_pkg_apis_core_v1beta1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes":                       schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents":                 schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref),
@@ -1388,8 +1396,8 @@ func schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref common.ReferenceCallback
 					},
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes. Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider type of the seed must match the shoot's provider.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector"),
 						},
 					},
 					"type": {
@@ -1423,7 +1431,7 @@ func schema_pkg_apis_core_v1alpha1_CloudProfileSpec(ref common.ReferenceCallback
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -2613,11 +2621,17 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig"),
 						},
 					},
+					"watchCacheSizes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes. Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's capacity is too small to cope with the amount of update requests and watchers for a particular resource, it might happen that controller watches are permanently stopped with `too old resource version` errors. Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.WatchCacheSizes"},
 	}
 }
 
@@ -3419,12 +3433,12 @@ func schema_pkg_apis_core_v1alpha1_MachineImage(ref common.ReferenceCallback) co
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Versions contains versions and expiration dates of the machine image",
+							Description: "Versions contains versions, expiration dates and container runtimes of the machine image",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImageVersion"),
 									},
 								},
 							},
@@ -3435,7 +3449,56 @@ func schema_pkg_apis_core_v1alpha1_MachineImage(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.MachineImageVersion"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_MachineImageVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImageVersion is an expirable version with list of supported container runtimes and interfaces",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version identifier.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"expirationDate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationDate defines the time at which this version expires.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"classification": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Classification defines the state of a version (preview, supported, deprecated)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"cri": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CRI list of supported container runtime and interfaces supported by this version",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"version"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -4699,6 +4762,41 @@ func schema_pkg_apis_core_v1alpha1_ResourceData(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_ResourceWatchCacheSize(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"apiGroup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIGroup is the API group of the resource for which the watch cache size should be configured. An unset value is used to specify the legacy core API (e.g. for `secrets`).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resource is the name of the resource for which the watch cache size should be configured (in lowercase plural form, e.g. `secrets`).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"size": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CacheSize specifies the watch cache size that should be configured for the specified resource.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"resource", "size"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_SecretBinding(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -5037,6 +5135,63 @@ func schema_pkg_apis_core_v1alpha1_SeedProvider(ref common.ReferenceCallback) co
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedSelector(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSelector contains constraints for selecting seed to be usable for shoots using a profile",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"matchLabels": {
+						SchemaProps: spec.SchemaProps{
+							Description: "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"matchExpressions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelectorRequirement"),
+									},
+								},
+							},
+						},
+					},
+					"providerTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelectorRequirement"},
 	}
 }
 
@@ -5731,7 +5886,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector"),
 						},
 					},
 					"resources": {
@@ -5771,7 +5926,7 @@ func schema_pkg_apis_core_v1alpha1_ShootSpec(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Toleration"},
 	}
 }
 
@@ -6229,6 +6384,41 @@ func schema_pkg_apis_core_v1alpha1_VolumeType(ref common.ReferenceCallback) comm
 				Required: []string{"class", "name"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_WatchCacheSizes(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"default": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Default configures the default watch cache size of the kube-apiserver (flag `--default-watch-cache-size`, defaults to 100). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources configures the watch cache size of the kube-apiserver per resource (flag `--watch-cache-sizes`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceWatchCacheSize"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceWatchCacheSize"},
 	}
 }
 
@@ -7254,8 +7444,8 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 					},
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							Description: "SeedSelector contains an optional list of labels on `Seed` resources that marks those seeds whose shoots may use this provider profile. An empty list means that all seeds of the same provider type are supported. This is useful for environments that are of the same type (like openstack) but may have different \"instances\"/landscapes. Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider type of the seed must match the shoot's provider.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector"),
 						},
 					},
 					"type": {
@@ -7289,7 +7479,7 @@ func schema_pkg_apis_core_v1beta1_CloudProfileSpec(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.KubernetesSettings", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Region", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.VolumeType", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -8387,11 +8577,17 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig"),
 						},
 					},
+					"watchCacheSizes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes. Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server's watch cache's capacity is too small to cope with the amount of update requests and watchers for a particular resource, it might happen that controller watches are permanently stopped with `too old resource version` errors. Starting from kubernetes v1.19, the API server's watch cache size is adapted dynamically and setting the watch cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/core/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.OIDCConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ServiceAccountConfig", "github.com/gardener/gardener/pkg/apis/core/v1beta1.WatchCacheSizes"},
 	}
 }
 
@@ -9193,12 +9389,12 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 							},
 						},
 						SchemaProps: spec.SchemaProps{
-							Description: "Versions contains versions and expiration dates of the machine image",
+							Description: "Versions contains versions, expiration dates and container runtimes of the machine image",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion"),
 									},
 								},
 							},
@@ -9209,7 +9405,56 @@ func schema_pkg_apis_core_v1beta1_MachineImage(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineImageVersion"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_MachineImageVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImageVersion is an expirable version with list of supported container runtimes and interfaces",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version identifier.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"expirationDate": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationDate defines the time at which this version expires.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"classification": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Classification defines the state of a version (preview, supported, deprecated)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"cri": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CRI list of supported container runtime and interfaces supported by this version",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"version"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -10430,6 +10675,41 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"apiGroup": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIGroup is the API group of the resource for which the watch cache size should be configured. An unset value is used to specify the legacy core API (e.g. for `secrets`).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"resource": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resource is the name of the resource for which the watch cache size should be configured (in lowercase plural form, e.g. `secrets`).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"size": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CacheSize specifies the watch cache size that should be configured for the specified resource.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+				},
+				Required: []string{"resource", "size"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SecretBinding(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -10782,6 +11062,63 @@ func schema_pkg_apis_core_v1beta1_SeedProvider(ref common.ReferenceCallback) com
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedSelector(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSelector contains constraints for selecting seed to be usable for shoots using a profile",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"matchLabels": {
+						SchemaProps: spec.SchemaProps{
+							Description: "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"matchExpressions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelectorRequirement"),
+									},
+								},
+							},
+						},
+					},
+					"providerTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Providers is optional and can be used by restricting seeds by their provider type. '*' can be used to enable seeds regardless of their provider type.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelectorRequirement"},
 	}
 }
 
@@ -11462,7 +11799,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 					"seedSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedSelector is an optional selector which must match a seed's labels for the shoot to be scheduled on that seed.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector"),
 						},
 					},
 					"resources": {
@@ -11502,7 +11839,7 @@ func schema_pkg_apis_core_v1beta1_ShootSpec(ref common.ReferenceCallback) common
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/core/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Maintenance", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Monitoring", "github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Networking", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Provider", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Toleration"},
 	}
 }
 
@@ -11804,6 +12141,41 @@ func schema_pkg_apis_core_v1beta1_VolumeType(ref common.ReferenceCallback) commo
 				Required: []string{"class", "name"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_WatchCacheSizes(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WatchCacheSizes contains configuration of the API server's watch cache sizes.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"default": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Default configures the default watch cache size of the kube-apiserver (flag `--default-watch-cache-size`, defaults to 100). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"resources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Resources configures the watch cache size of the kube-apiserver per resource (flag `--watch-cache-sizes`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize"},
 	}
 }
 

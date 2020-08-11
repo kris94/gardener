@@ -158,6 +158,17 @@ func beConditionWithStatus(status gardencorev1beta1.ConditionStatus) types.Gomeg
 	}))
 }
 
+func beConditionWithMissingRequiredDeployment(deployments []*appsv1.Deployment) types.GomegaMatcher {
+	var names = make([]string, 0, len(deployments))
+	for _, deploy := range deployments {
+		names = append(names, deploy.Name)
+	}
+	return PointTo(MatchFields(IgnoreExtras, Fields{
+		"Status":  Equal(gardencorev1beta1.ConditionFalse),
+		"Message": ContainSubstring("%s", names),
+	}))
+}
+
 func beConditionWithStatusAndCodes(status gardencorev1beta1.ConditionStatus, codes ...gardencorev1beta1.ErrorCode) types.GomegaMatcher {
 	return PointTo(MatchFields(IgnoreExtras, Fields{
 		"Status": Equal(status),
@@ -193,6 +204,16 @@ var _ = Describe("health check", func() {
 			},
 		}
 
+		gcpShootWantsVPA = &gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Kubernetes: gardencorev1beta1.Kubernetes{
+					VerticalPodAutoscaler: &gardencorev1beta1.VerticalPodAutoscaler{
+						Enabled: true,
+					},
+				},
+			},
+		}
+
 		seedNamespace = "shoot--foo--bar"
 
 		// control plane deployments
@@ -208,6 +229,15 @@ var _ = Describe("health check", func() {
 			kubeControllerManagerDeployment,
 			kubeSchedulerDeployment,
 			clusterAutoscalerDeployment,
+		}
+
+		withVpaDeployments = func(deploys ...*appsv1.Deployment) []*appsv1.Deployment {
+			var deployments = make([]*appsv1.Deployment, 0, len(deploys))
+			deployments = append(deployments, deploys...)
+			for _, deploymentName := range v1beta1constants.GetShootVPADeploymentNames() {
+				deployments = append(deployments, newDeployment(seedNamespace, deploymentName, v1beta1constants.GardenRoleControlPlane, true))
+			}
+			return deployments
 		}
 
 		// control plane etcds
@@ -239,16 +269,10 @@ var _ = Describe("health check", func() {
 			prometheusStatefulSet,
 		}
 
-		kibanaDeployment = newDeployment(seedNamespace, v1beta1constants.DeploymentNameKibana, v1beta1constants.GardenRoleLogging, true)
-
-		requiredLoggingControlPlaneDeployments = []*appsv1.Deployment{
-			kibanaDeployment,
-		}
-
-		elasticSearchStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameElasticSearch, v1beta1constants.GardenRoleLogging, true)
+		lokiStatefulSet = newStatefulSet(seedNamespace, v1beta1constants.StatefulSetNameLoki, v1beta1constants.GardenRoleLogging, true)
 
 		requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
-			elasticSearchStatefulSet,
+			lokiStatefulSet,
 		}
 	)
 
@@ -301,8 +325,24 @@ var _ = Describe("health check", func() {
 						State: gardencorev1beta1.LastOperationStateSucceeded}}}},
 			},
 			BeNil()),
-		Entry("missing required deployment",
-			gcpShoot,
+		Entry("all healthy (needs VPA)",
+			gcpShootWantsVPA,
+			"gcp",
+			withVpaDeployments(
+				gardenerResourceManagerDeployment,
+				kubeAPIServerDeployment,
+				kubeControllerManagerDeployment,
+				kubeSchedulerDeployment,
+			),
+			requiredControlPlaneEtcds,
+			[]*extensionsv1alpha1.Worker{
+				{Status: extensionsv1alpha1.WorkerStatus{DefaultStatus: extensionsv1alpha1.DefaultStatus{
+					LastOperation: &gardencorev1beta1.LastOperation{
+						State: gardencorev1beta1.LastOperationStateSucceeded}}}},
+			},
+			BeNil()),
+		Entry("missing required deployments",
+			gcpShootWantsVPA,
 			"gcp",
 			[]*appsv1.Deployment{
 				kubeAPIServerDeployment,
@@ -311,7 +351,7 @@ var _ = Describe("health check", func() {
 			},
 			requiredControlPlaneEtcds,
 			nil,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
+			beConditionWithMissingRequiredDeployment(withVpaDeployments(gardenerResourceManagerDeployment))),
 		Entry("required deployment unhealthy",
 			gcpShoot,
 			"gcp",
@@ -586,14 +626,14 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckMonitoringControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isHealthCheckObsolete, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
 			)
 
-			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isTestingShoot, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, isHealthCheckObsolete, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -649,46 +689,31 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckLoggingControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, isTestingShoot bool, conditionMatcher types.GomegaMatcher) {
+		func(statefulSets []*appsv1.StatefulSet, isHealthCheckObsolete bool, conditionMatcher types.GomegaMatcher) {
 			var (
-				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = botanist.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil)
 			)
 
-			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isTestingShoot, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, isHealthCheckObsolete, condition, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
-			requiredLoggingControlPlaneDeployments,
 			requiredLoggingControlPlaneStatefulSets,
 			false,
 			BeNil()),
-		Entry("required deployment missing",
-			nil,
-			requiredLoggingControlPlaneStatefulSets,
-			false,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("required stateful set missing",
-			requiredLoggingControlPlaneDeployments,
 			nil,
-			false,
-			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
-		Entry("deployment unhealthy",
-			[]*appsv1.Deployment{newDeployment(kibanaDeployment.Namespace, kibanaDeployment.Name, roleOf(kibanaDeployment), false)},
-			requiredLoggingControlPlaneStatefulSets,
 			false,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("stateful set unhealthy",
-			requiredLoggingControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
-				newStatefulSet(elasticSearchStatefulSet.Namespace, elasticSearchStatefulSet.Name, roleOf(elasticSearchStatefulSet), false),
+				newStatefulSet(lokiStatefulSet.Namespace, lokiStatefulSet.Name, roleOf(lokiStatefulSet), false),
 			},
 			false,
 			beConditionWithStatus(gardencorev1beta1.ConditionFalse)),
 		Entry("shoot purpose is testing, omit all checks",
-			[]*appsv1.Deployment{},
 			[]*appsv1.StatefulSet{},
 			true,
 			BeNil()),

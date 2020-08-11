@@ -496,13 +496,11 @@ var _ = Describe("resourcereferencemanager", func() {
 				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, user)
 
 				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, user.Name))
-				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedByDeprecated, user.Name))
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, user.Name))
-				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedByDeprecated, user.Name))
 			})
 
 			It("should accept because all referenced objects have been found", func() {
@@ -842,12 +840,32 @@ var _ = Describe("resourcereferencemanager", func() {
 		})
 
 		Context("CloudProfile - Update Machine image versions", func() {
-			versions := []core.ExpirableVersion{
-				{Version: "1.17.3"},
-				{Version: "1.17.2"},
-				{Version: "1.17.1"},
-				{Version: "1.17.0"},
-				{Version: "1.16.0"},
+			versions := []core.MachineImageVersion{
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "1.17.3",
+					},
+				},
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "1.17.2",
+					},
+				},
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "1.17.1",
+					},
+				},
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "1.17.0",
+					},
+				},
+				{
+					ExpirableVersion: core.ExpirableVersion{
+						Version: "1.16.0",
+					},
+				},
 			}
 			shootOne := shootBase
 			shootOne.Name = "shoot-One"
@@ -919,10 +937,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
 
-				newVersions := []core.ExpirableVersion{
-					{Version: "1.17.3"},
-					{Version: "1.17.2"},
-					{Version: "1.17.1"},
+				newVersions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.3",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.2",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.1",
+						},
+					},
 				}
 
 				// new cloud profile has version 1.17.0 and 1.16.0 removed. These are not in use by any worker of any shoot
@@ -951,10 +981,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
 
-				newVersions := []core.ExpirableVersion{
-					{Version: "1.17.3"},
-					{Version: "1.17.0"},
-					{Version: "1.16.0"},
+				newVersions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.3",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.0",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.16.0",
+						},
+					},
 				}
 
 				// new cloud profile has version 1.17.1 removed.
@@ -1011,10 +1053,22 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(s)).To(Succeed())
 
-				newVersions := []core.ExpirableVersion{
-					{Version: "1.17.3"},
-					{Version: "1.17.0"},
-					{Version: "1.16.0"},
+				newVersions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.3",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.0",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.16.0",
+						},
+					},
 				}
 
 				// new cloud profile has version 1.17.1 removed.
@@ -1044,12 +1098,32 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
 				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwo)).To(Succeed())
 
-				newVersions := []core.ExpirableVersion{
-					{Version: "1.17.3"},
-					{Version: "1.17.2"},
-					{Version: "1.17.1"},
-					{Version: "1.17.0"},
-					{Version: "1.16.0"},
+				newVersions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.3",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.2",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.1",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.0",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.16.0",
+						},
+					},
 				}
 
 				// new cloud profile has ubuntu image removed.

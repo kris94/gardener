@@ -406,8 +406,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>seedSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
-Kubernetes meta/v1.LabelSelector
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
 </a>
 </em>
 </td>
@@ -415,7 +415,9 @@ Kubernetes meta/v1.LabelSelector
 <em>(Optional)</em>
 <p>SeedSelector contains an optional list of labels on <code>Seed</code> resources that marks those seeds whose shoots may use this provider profile.
 An empty list means that all seeds of the same provider type are supported.
-This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.</p>
+This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.
+Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
+type of the seed must match the shoot&rsquo;s provider.</p>
 </td>
 </tr>
 <tr>
@@ -1544,8 +1546,8 @@ string
 <td>
 <code>seedSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
-Kubernetes meta/v1.LabelSelector
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
 </a>
 </em>
 </td>
@@ -2182,6 +2184,7 @@ BackupEntry&rsquo;s generation, which is updated on mutation by the API Server.<
 </h3>
 <p>
 (<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>, 
 <a href="#core.gardener.cloud/v1beta1.Worker">Worker</a>)
 </p>
 <p>
@@ -2374,8 +2377,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>seedSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
-Kubernetes meta/v1.LabelSelector
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
 </a>
 </em>
 </td>
@@ -2383,7 +2386,9 @@ Kubernetes meta/v1.LabelSelector
 <em>(Optional)</em>
 <p>SeedSelector contains an optional list of labels on <code>Seed</code> resources that marks those seeds whose shoots may use this provider profile.
 An empty list means that all seeds of the same provider type are supported.
-This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.</p>
+This is useful for environments that are of the same type (like openstack) but may have different &ldquo;instances&rdquo;/landscapes.
+Optionally a list of possible providers can be added to enable cross-provider scheduling. By default, the provider
+type of the seed must match the shoot&rsquo;s provider.</p>
 </td>
 </tr>
 <tr>
@@ -3343,7 +3348,7 @@ string
 <p>
 (<em>Appears on:</em>
 <a href="#core.gardener.cloud/v1beta1.KubernetesSettings">KubernetesSettings</a>, 
-<a href="#core.gardener.cloud/v1beta1.MachineImage">MachineImage</a>)
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion</a>)
 </p>
 <p>
 <p>ExpirableVersion contains a version and an expiration date.</p>
@@ -3851,6 +3856,26 @@ ServiceAccountConfig
 <em>(Optional)</em>
 <p>ServiceAccountConfig contains configuration settings for the service account handling
 of the kube-apiserver.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>watchCacheSizes</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.WatchCacheSizes">
+WatchCacheSizes
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>WatchCacheSizes contains configuration of the API server&rsquo;s watch cache sizes.
+Configuring these flags might be useful for large-scale Shoot clusters with a lot of parallel update requests
+and a lot of watching controllers (e.g. large shooted Seed clusters). When the API server&rsquo;s watch cache&rsquo;s
+capacity is too small to cope with the amount of update requests and watchers for a particular resource, it
+might happen that controller watches are permanently stopped with <code>too old resource version</code> errors.
+Starting from kubernetes v1.19, the API server&rsquo;s watch cache size is adapted dynamically and setting the watch
+cache size flags will have no effect, except when setting it to 0 (which disables the watch cache).</p>
 </td>
 </tr>
 </tbody>
@@ -5210,13 +5235,61 @@ string
 <td>
 <code>versions</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">
-[]ExpirableVersion
+<a href="#core.gardener.cloud/v1beta1.MachineImageVersion">
+[]MachineImageVersion
 </a>
 </em>
 </td>
 <td>
-<p>Versions contains versions and expiration dates of the machine image</p>
+<p>Versions contains versions, expiration dates and container runtimes of the machine image</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.MachineImageVersion">MachineImageVersion
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MachineImage">MachineImage</a>)
+</p>
+<p>
+<p>MachineImageVersion is an expirable version with list of supported container runtimes and interfaces</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ExpirableVersion</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExpirableVersion">
+ExpirableVersion
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>ExpirableVersion</code> are embedded into this type.)
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>cri</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.CRI">
+[]CRI
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CRI list of supported container runtime and interfaces supported by this version</p>
 </td>
 </tr>
 </tbody>
@@ -6553,6 +6626,61 @@ quality, reliability, access restrictions, etc.</p>
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ResourceWatchCacheSize">ResourceWatchCacheSize
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.WatchCacheSizes">WatchCacheSizes</a>)
+</p>
+<p>
+<p>ResourceWatchCacheSize contains configuration of the API server&rsquo;s watch cache size for one specific resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiGroup</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>APIGroup is the API group of the resource for which the watch cache size should be configured.
+An unset value is used to specify the legacy core API (e.g. for <code>secrets</code>).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resource</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Resource is the name of the resource for which the watch cache size should be configured
+(in lowercase plural form, e.g. <code>secrets</code>).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>size</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<p>CacheSize specifies the watch cache size that should be configured for the specified resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedBackup">SeedBackup
 </h3>
 <p>
@@ -6786,6 +6914,55 @@ string
 </td>
 <td>
 <p>Region is a name of a region.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSelector">SeedSelector
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.CloudProfileSpec">CloudProfileSpec</a>, 
+<a href="#core.gardener.cloud/v1beta1.ShootSpec">ShootSpec</a>)
+</p>
+<p>
+<p>SeedSelector contains constraints for selecting seed to be usable for shoots using a profile</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>LabelSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>LabelSelector</code> are embedded into this type.)
+</p>
+<em>(Optional)</em>
+<p>LabelSelector is optional and can be used to select seeds by their label settings</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerTypes</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Providers is optional and can be used by restricting seeds by their provider type. &lsquo;*&rsquo; can be used to enable seeds regardless of their provider type.</p>
 </td>
 </tr>
 </tbody>
@@ -7750,8 +7927,8 @@ string
 <td>
 <code>seedSelector</code></br>
 <em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.15/#labelselector-v1-meta">
-Kubernetes meta/v1.LabelSelector
+<a href="#core.gardener.cloud/v1beta1.SeedSelector">
+SeedSelector
 </a>
 </em>
 </td>
@@ -8259,6 +8436,55 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Usable defines if the volume type can be used for shoot clusters.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.WatchCacheSizes">WatchCacheSizes
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.KubeAPIServerConfig">KubeAPIServerConfig</a>)
+</p>
+<p>
+<p>WatchCacheSizes contains configuration of the API server&rsquo;s watch cache sizes.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>default</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Default configures the default watch cache size of the kube-apiserver
+(flag <code>--default-watch-cache-size</code>, defaults to 100).
+See: <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/</a></p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resources</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ResourceWatchCacheSize">
+[]ResourceWatchCacheSize
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Resources configures the watch cache size of the kube-apiserver per resource
+(flag <code>--watch-cache-sizes</code>).
+See: <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/</a></p>
 </td>
 </tr>
 </tbody>

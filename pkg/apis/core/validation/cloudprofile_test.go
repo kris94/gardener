@@ -146,8 +146,10 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					ObjectMeta: metadata,
 					Spec: core.CloudProfileSpec{
 						Type: "unknown",
-						SeedSelector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{"foo": "bar"},
+						SeedSelector: &core.SeedSelector{
+							LabelSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"foo": "bar"},
+							},
 						},
 						Kubernetes: core.KubernetesSettings{
 							Versions: []core.ExpirableVersion{{
@@ -157,9 +159,11 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						MachineImages: []core.MachineImage{
 							{
 								Name: "some-machineimage",
-								Versions: []core.ExpirableVersion{
+								Versions: []core.MachineImageVersion{
 									{
-										Version: "1.2.3",
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
 									},
 								},
 							},
@@ -323,14 +327,24 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name: "some-machineimage",
-							Versions: []core.ExpirableVersion{
-								{Version: "3.4.6", Classification: &supportedClassification},
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "3.4.6",
+										Classification: &supportedClassification,
+									},
+								},
 							},
 						},
 						{
 							Name: "some-machineimage",
-							Versions: []core.ExpirableVersion{
-								{Version: "3.4.5", Classification: &previewClassification},
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "3.4.5",
+										Classification: &previewClassification,
+									},
+								},
 							},
 						},
 					}
@@ -363,19 +377,23 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name: "some-machineimage",
-							Versions: []core.ExpirableVersion{
+							Versions: []core.MachineImageVersion{
 								{
-									Version:        "0.1.2",
-									Classification: &supportedClassification,
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "0.1.2",
+										Classification: &supportedClassification,
+									},
 								},
 							},
 						},
 						{
 							Name: "xy",
-							Versions: []core.ExpirableVersion{
+							Versions: []core.MachineImageVersion{
 								{
-									Version:        "a.b.c",
-									Classification: &supportedClassification,
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "a.b.c",
+										Classification: &supportedClassification,
+									},
 								},
 							},
 						},
@@ -392,46 +410,43 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
-				It("should forbid expiration date on latest machine image version", func() {
+				It("should allow expiration date on latest machine image version", func() {
 					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name: "some-machineimage",
-							Versions: []core.ExpirableVersion{
+							Versions: []core.MachineImageVersion{
 								{
-									Version:        "0.1.2",
-									ExpirationDate: expirationDate,
-									Classification: &previewClassification,
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "0.1.2",
+										ExpirationDate: expirationDate,
+										Classification: &previewClassification,
+									},
 								},
 								{
-									Version:        "0.1.1",
-									Classification: &supportedClassification,
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "0.1.1",
+										Classification: &supportedClassification,
+									},
 								},
 							},
 						},
 						{
 							Name: "xy",
-							Versions: []core.ExpirableVersion{
+							Versions: []core.MachineImageVersion{
 								{
-									Version:        "0.1.1",
-									ExpirationDate: expirationDate,
-									Classification: &supportedClassification,
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "0.1.1",
+										ExpirationDate: expirationDate,
+										Classification: &supportedClassification,
+									},
 								},
 							},
 						},
 					}
 
 					errorList := ValidateCloudProfile(cloudProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.machineImages.expirationDate"),
-						"Detail": ContainSubstring("some-machineimage"),
-					})), PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":   Equal(field.ErrorTypeInvalid),
-						"Field":  Equal("spec.machineImages.expirationDate"),
-						"Detail": ContainSubstring("xy"),
-					}))))
+					Expect(errorList).To(BeEmpty())
 				})
 
 				It("should forbid invalid classification for machine image versions", func() {
@@ -439,10 +454,12 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
 						{
 							Name: "some-machineimage",
-							Versions: []core.ExpirableVersion{
+							Versions: []core.MachineImageVersion{
 								{
-									Version:        "0.1.2",
-									Classification: &classification,
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "0.1.2",
+										Classification: &classification,
+									},
 								},
 							},
 						},
@@ -455,6 +472,89 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						"BadValue": Equal(classification),
 					}))))
 				})
+			})
+
+			It("should forbid non-supported container runtime interface names", func() {
+				cloudProfile.Spec.MachineImages = []core.MachineImage{
+					{
+						Name: "invalid-cri-name",
+						Versions: []core.MachineImageVersion{
+							{
+								ExpirableVersion: core.ExpirableVersion{
+									Version: "0.1.2",
+								},
+								CRI: []core.CRI{
+									{
+										Name: "invalid-cri-name",
+									},
+								},
+							},
+						},
+					},
+					{
+						Name: "valid-cri-name",
+						Versions: []core.MachineImageVersion{
+							{
+								ExpirableVersion: core.ExpirableVersion{
+									Version: "0.1.2",
+								},
+								CRI: []core.CRI{
+									{
+										Name: core.CRINameContainerD,
+									},
+								},
+							},
+						},
+					},
+				}
+
+				errorList := ValidateCloudProfile(cloudProfile)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.machineImages[0].versions[0].cri[0]"),
+				}))))
+			})
+
+			It("should forbid duplicated container runtime interface names", func() {
+				cloudProfile.Spec.MachineImages[0].Versions[0].CRI = []core.CRI{
+					{
+						Name: core.CRINameContainerD,
+					},
+					{
+						Name: core.CRINameContainerD,
+					},
+				}
+
+				errorList := ValidateCloudProfile(cloudProfile)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.machineImages[0].versions[0].cri[1]"),
+				}))))
+			})
+
+			It("should forbid duplicated container runtime names", func() {
+				cloudProfile.Spec.MachineImages[0].Versions[0].CRI = []core.CRI{
+					{
+						Name: core.CRINameContainerD,
+						ContainerRuntimes: []core.ContainerRuntime{
+							{
+								Type: "cr1",
+							},
+							{
+								Type: "cr1",
+							},
+						},
+					},
+				}
+
+				errorList := ValidateCloudProfile(cloudProfile)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal("spec.machineImages[0].versions[0].cri[0].containerRuntimes[1].type"),
+				}))))
 			})
 
 			Context("machine types validation", func() {
@@ -634,16 +734,24 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					MachineImages: []core.MachineImage{
 						{
 							Name: "some-machineimage",
-							Versions: []core.ExpirableVersion{
+							Versions: []core.MachineImageVersion{
 								{
-									Version:        "1.2.3",
-									Classification: &supportedClassification,
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "1.2.3",
+										Classification: &supportedClassification,
+									},
 								},
 							},
 						},
 					},
-					Kubernetes: core.KubernetesSettings{Versions: []core.ExpirableVersion{
-						{Version: "1.17.2", Classification: &deprecatedClassification}}},
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{
+								Version:        "1.17.2",
+								Classification: &deprecatedClassification,
+							},
+						},
+					},
 					Regions: []core.Region{
 						{
 							Name: regionName,
@@ -676,10 +784,27 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 		Context("Removed MachineImage versions", func() {
 			It("deleting version - should not return any errors", func() {
-				versions := []core.ExpirableVersion{
-					{Version: "2135.6.2", Classification: &deprecatedClassification},
-					{Version: "2135.6.1", Classification: &deprecatedClassification, ExpirationDate: dateInThePast},
-					{Version: "2135.6.0", Classification: &deprecatedClassification, ExpirationDate: dateInThePast},
+				versions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "2135.6.2",
+							Classification: &deprecatedClassification,
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "2135.6.1",
+							Classification: &deprecatedClassification,
+							ExpirationDate: dateInThePast,
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "2135.6.0",
+							Classification: &deprecatedClassification,
+							ExpirationDate: dateInThePast,
+						},
+					},
 				}
 				cloudProfileNew.Spec.MachineImages[0].Versions = versions[0:1]
 				cloudProfileOld.Spec.MachineImages[0].Versions = versions
@@ -740,9 +865,11 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					MachineImages: []core.MachineImage{
 						{
 							Name: "some-machineimage",
-							Versions: []core.ExpirableVersion{
+							Versions: []core.MachineImageVersion{
 								{
-									Version: "1.2.3",
+									ExpirableVersion: core.ExpirableVersion{
+										Version: "1.2.3",
+									},
 								},
 							},
 						},
@@ -783,9 +910,18 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 
 		Context("Machine image versions", func() {
 			It("it should return an error when creating a CloudProfile having a Machine image version with expiration date in the past", func() {
-				versions := []core.ExpirableVersion{
-					{Version: "1.17.2"},
-					{Version: "1.17.1", ExpirationDate: dateInThePast},
+				versions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.2",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version:        "1.17.1",
+							ExpirationDate: dateInThePast,
+						},
+					},
 				}
 				cloudProfile.Spec.MachineImages[0].Versions = versions
 				errorList := ValidateCloudProfileCreation(cloudProfile)

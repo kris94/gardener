@@ -68,9 +68,43 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 	return common.GenerateAddonConfig(values, enabled), nil
 }
 
-// EnsureIngressDNSRecord ensures the nginx DNSEntry and waits for completion.
+// EnsureIngressDNSRecord deploys the nginx ingress DNSEntry and DNSOwner resources.
 func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
-	return component.OpWaiter(b.Shoot.Components.Extensions.DNS.NginxEntry).Deploy(ctx)
+	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && b.Shoot.NginxIngressEnabled() {
+		if b.isRestorePhase() {
+			return dnsRestoreDeployer{
+				entry: b.Shoot.Components.Extensions.DNS.NginxEntry,
+				owner: b.Shoot.Components.Extensions.DNS.NginxOwner,
+			}.Deploy(ctx)
+		}
+
+		return component.OpWaiter(
+			b.Shoot.Components.Extensions.DNS.NginxOwner,
+			b.Shoot.Components.Extensions.DNS.NginxEntry,
+		).Deploy(ctx)
+	}
+
+	return component.OpWaiter(
+		b.Shoot.Components.Extensions.DNS.NginxEntry,
+		b.Shoot.Components.Extensions.DNS.NginxOwner,
+	).Deploy(ctx)
+}
+
+// DestroyIngressDNSRecord destroys the nginx ingress DNSEntry and DNSOwner resources.
+func (b *Botanist) DestroyIngressDNSRecord(ctx context.Context) error {
+	return component.OpDestroyAndWait(
+		b.Shoot.Components.Extensions.DNS.NginxEntry,
+		b.Shoot.Components.Extensions.DNS.NginxOwner,
+	).Destroy(ctx)
+}
+
+// MigrateIngressDNSRecord destroys the nginx ingress DNSEntry and DNSOwner resources,
+// without removing the entry from the DNS provider.
+func (b *Botanist) MigrateIngressDNSRecord(ctx context.Context) error {
+	return component.OpDestroy(
+		b.Shoot.Components.Extensions.DNS.NginxOwner,
+		b.Shoot.Components.Extensions.DNS.NginxEntry,
+	).Destroy(ctx)
 }
 
 // DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEntry.
@@ -88,14 +122,40 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 	))
 }
 
+// DefaultNginxIngressDNSOwner returns DeployWaiter which removes the nginx ingress DNSOwner.
+func (b *Botanist) DefaultNginxIngressDNSOwner(seedClient client.Client) component.DeployWaiter {
+	return component.OpDestroy(dns.NewDNSOwner(
+		&dns.OwnerValues{
+			Name: DNSIngressName,
+		},
+		b.Shoot.SeedNamespace,
+		b.K8sSeedClient.ChartApplier(),
+		b.ChartsRootPath,
+		seedClient,
+	))
+}
+
 // SetNginxIngressAddress sets the IP address of the API server's LoadBalancer.
 func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
 	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && b.Shoot.NginxIngressEnabled() {
+		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSIngressName
+		b.Shoot.Components.Extensions.DNS.NginxOwner = dns.NewDNSOwner(
+			&dns.OwnerValues{
+				Name:    DNSIngressName,
+				Active:  true,
+				OwnerID: ownerID,
+			},
+			b.Shoot.SeedNamespace,
+			b.K8sSeedClient.ChartApplier(),
+			b.ChartsRootPath,
+			seedClient,
+		)
 		b.Shoot.Components.Extensions.DNS.NginxEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSIngressName,
 				DNSName: b.Shoot.GetIngressFQDN("*"),
 				Targets: []string{address},
+				OwnerID: ownerID,
 			},
 			b.Shoot.SeedNamespace,
 			b.K8sSeedClient.ChartApplier(),
@@ -148,8 +208,6 @@ func (b *Botanist) DeployManagedResources(ctx context.Context) error {
 			common.ManagedResourceShootCoreName:     {false, b.generateCoreAddonsChart},
 			common.ManagedResourceCoreNamespaceName: {true, b.generateCoreNamespacesChart},
 			common.ManagedResourceAddonsName:        {false, b.generateOptionalAddonsChart},
-			// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
-			common.ManagedResourceKymaName: {false, b.generateTemporaryKymaAddonsChart},
 		}
 	)
 
@@ -231,12 +289,19 @@ func (b *Botanist) deployCloudConfigExecutionManagedResource(ctx context.Context
 		}
 		data := renderedChart.AsSecretData()
 		secretName := "managedresource-" + name
+
+		// Copy labels into a new map to avoid concurrent map writes.
+		secretLabelsCopy := make(map[string]string)
+		for k, v := range secretLabels {
+			secretLabelsCopy[k] = v
+		}
+
 		fns = append(fns, func(ctx context.Context) error {
 			return manager.
 				NewSecret(b.K8sSeedClient.Client()).
 				WithNamespacedName(b.Shoot.SeedNamespace, secretName).
 				WithKeyValues(data).
-				WithLabels(secretLabels).
+				WithLabels(secretLabelsCopy).
 				Reconcile(ctx)
 		})
 		cloudConfigManagedResource.WithSecretRef(secretName)
@@ -339,6 +404,7 @@ func (b *Botanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, erro
 			},
 		}
 		verticalPodAutoscaler = map[string]interface{}{
+			"clusterType":         "shoot",
 			"admissionController": map[string]interface{}{"enableServiceAccount": false},
 			"exporter":            map[string]interface{}{"enableServiceAccount": false},
 			"recommender":         map[string]interface{}{"enableServiceAccount": false},
@@ -574,14 +640,5 @@ func (b *Botanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, 
 		"global":               global,
 		"kubernetes-dashboard": kubernetesDashboard,
 		"nginx-ingress":        nginxIngress,
-	})
-}
-
-// generateTemporaryKymaAddonsChart renders the gardener-resource-manager chart for the kyma addon. After that it
-// creates a ManagedResource CRD that references the rendered manifests and creates it.
-// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
-func (b *Botanist) generateTemporaryKymaAddonsChart() (*chartrenderer.RenderedChart, error) {
-	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(common.ChartPath, "shoot-addons-kyma"), "kyma", "kyma-installer", map[string]interface{}{
-		"kyma": common.GenerateAddonConfig(nil, metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, common.ShootExperimentalAddonKyma)),
 	})
 }

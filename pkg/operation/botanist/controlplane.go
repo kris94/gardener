@@ -128,7 +128,7 @@ func (b *Botanist) EnsureClusterIdentity(ctx context.Context) error {
 	}
 
 	latestShoot := &gardencorev1beta1.Shoot{}
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
+	if err := b.K8sGardenClient.DirectClient().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, b.Shoot.Info.Name), latestShoot); err != nil {
 		return err
 	}
 
@@ -266,6 +266,10 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			"exporter":            exporter,
 			"recommender":         recommender,
 			"updater":             updater,
+			"deploymentLabels": map[string]interface{}{
+				v1beta1constants.GardenRole:           v1beta1constants.GardenRoleControlPlane,
+				v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			},
 		}
 	)
 
@@ -695,6 +699,16 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 			"checksum/secret-" + name: b.CheckSums[name],
 		},
 		"replicas": b.Shoot.GetReplicas(1),
+		// We run one GRM per shoot control plane, and the GRM is doing its leader election via configmaps in the seed -
+		// by default every 2s. This can lead to a lot of PUT /v1/configmaps requests on the API server, and given that
+		// a seed is very busy anyways, we should not unnecessarily stress the API server with this leader election.
+		// The GRM's sync period is 1m anyways, so it doesn't matter too much if the leadership determination may take up
+		// to one minute.
+		"leaderElection": map[string]interface{}{
+			"leaseDuration": "40s",
+			"renewDeadline": "15s",
+			"retryPeriod":   "10s",
+		},
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.GardenerResourceManagerImageName)
@@ -1107,6 +1121,10 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 				"auditPolicy": auditPolicy,
 			}
 		}
+
+		if watchCacheSizes := apiServerConfig.WatchCacheSizes; watchCacheSizes != nil {
+			defaultValues["watchCacheSizes"] = watchCacheSizes
+		}
 	}
 
 	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL
@@ -1346,7 +1364,7 @@ func (b *Botanist) DefaultKubeAPIServerService() component.DeployWaiter {
 		b.K8sSeedClient.DirectClient(),
 		nil,
 		b.setAPIServerServiceClusterIP,
-		b.setAPIServerAddress,
+		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.DirectClient()) },
 	)
 }
 
@@ -1395,37 +1413,63 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 }
 
 // setAPIServerAddress sets the IP address of the API server's LoadBalancer.
-func (b *Botanist) setAPIServerAddress(address string) {
+func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client) {
 	b.Operation.APIServerAddress = address
 
 	if b.NeedsInternalDNS() {
+		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSInternalName
+		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewDNSOwner(
+			&dns.OwnerValues{
+				Name:    DNSInternalName,
+				Active:  true,
+				OwnerID: ownerID,
+			},
+			b.Shoot.SeedNamespace,
+			b.K8sSeedClient.ChartApplier(),
+			b.ChartsRootPath,
+			seedClient,
+		)
 		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSInternalName,
 				DNSName: common.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
+				OwnerID: ownerID,
 			},
 			b.Shoot.SeedNamespace,
 			b.K8sSeedClient.ChartApplier(),
 			b.ChartsRootPath,
 			b.Logger,
-			b.K8sSeedClient.DirectClient(),
+			seedClient,
 			nil,
 		)
 	}
 
 	if b.NeedsExternalDNS() {
+		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSExternalName
+		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewDNSOwner(
+			&dns.OwnerValues{
+				Name:    DNSExternalName,
+				Active:  true,
+				OwnerID: ownerID,
+			},
+			b.Shoot.SeedNamespace,
+			b.K8sSeedClient.ChartApplier(),
+			b.ChartsRootPath,
+			seedClient,
+		)
 		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewDNSEntry(
 			&dns.EntryValues{
 				Name:    DNSExternalName,
 				DNSName: common.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 				Targets: []string{b.APIServerAddress},
+				OwnerID: ownerID,
 			},
 			b.Shoot.SeedNamespace,
 			b.K8sSeedClient.ChartApplier(),
 			b.ChartsRootPath,
 			b.Logger,
-			b.K8sSeedClient.DirectClient(),
+			seedClient,
 			nil,
 		)
 	}

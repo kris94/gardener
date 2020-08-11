@@ -7,8 +7,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   ports:
-    - port: 443
-      targetPort: 443
+    - port: {{ .Values.admissionController.servicePort }}
+      targetPort: {{ .Values.admissionController.port }}
   selector:
     app: vpa-admission-controller
 {{- end }}

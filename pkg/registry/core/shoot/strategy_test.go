@@ -348,16 +348,6 @@ var _ = Describe("Strategy", func() {
 				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
 			})
-
-			// TODO: Just a temporary solution. Remove this in a future version once Kyma is moved out again.
-			It("should increase when the kyma-addon annotation gets changed", func() {
-				oldShoot := &core.Shoot{}
-				newShoot := oldShoot.DeepCopy()
-				newShoot.Annotations = map[string]string{common.ShootExperimentalAddonKyma: "true"}
-
-				shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
-				Expect(newShoot.Generation).To(Equal(oldShoot.Generation + 1))
-			})
 		})
 
 		Context("admission plugin migration", func() {
@@ -407,10 +397,10 @@ var _ = Describe("GetAttrs", func() {
 	It("should return correct result", func() {
 		ls, fs, err := shootregistry.GetAttrs(newShoot("foo"))
 
+		Expect(err).NotTo(HaveOccurred())
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
 		Expect(fs.Get(core.ShootSeedName)).To(Equal("foo"))
-		Expect(err).NotTo(HaveOccurred())
 	})
 })
 

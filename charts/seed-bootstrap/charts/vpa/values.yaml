@@ -8,6 +8,8 @@ global:
 labels:
   garden.sapcloud.io/role: vpa
 
+clusterType: seed
+
 admissionController:
   replicas: 1
   enabled: true
@@ -15,6 +17,8 @@ admissionController:
   podLabels: {}
   enableServiceAccount: true
   registerByURL: false
+  port: 10250
+  servicePort: 443
 
 exporter:
   replicas: 1
@@ -22,8 +26,9 @@ exporter:
   podAnnotations: {}
   podLabels: {}
   enableServiceAccount: true
-  enableVPA: true
   enableService: true
+  port: 9570
+  servicePort: 9570
 
 recommender:
   replicas: 1

@@ -2,7 +2,6 @@ package framework
 
 import (
 	"context"
-	"encoding/base64"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +9,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
@@ -26,9 +26,9 @@ const (
 	kubeconfigString = "kubeconfig"
 )
 
-// SeedFramework represents the seed test framework that includes
+// SeedCreationFramework represents the seed test framework that includes
 // test functions that can be executed ona specific seed
-type SeedFramework struct {
+type SeedCreationFramework struct {
 	*GardenerFramework
 	TestDescription
 	Config *SeedCreationConfig
@@ -41,26 +41,31 @@ type SeedFramework struct {
 // SeedCreationConfig is the configuration for a seed framework that will be filled with user provided data
 type SeedCreationConfig struct {
 	GardenerConfig        *GardenerConfig
-	SeedName              string //e.g. test-aws
-	IngressDomain         string //e.g. ingress.seed-aws.i/d<User>.shoot.dev.k8s-hana.ondemand.com
-	SecretRefName         string //e.g. seed-test-aws
-	SecretRefNamespace    string //e.g. garden
+	SeedName              string
+	IngressDomain         string
+	SecretRefName         string
+	SecretRefNamespace    string
 	NewSecretName         string
 	NewSecretNamespace    string
+	BackupSecretName      string
+	BackupSecretNamespace string
+	BackupSecretProvider  string
 	ShootedSeedName       string
 	ShootedSeedNamespace  string
 	ShootedSeedKubeconfig string
+	Provider              string
+	ProviderType          string
 	SeedScheme            *runtime.Scheme
 }
 
-// NewSeedFramework creates a new simple Shoot framework
-func NewSeedCreationFramework(cfg *SeedCreationConfig) *SeedFramework {
+// NewSeedCreationFramework creates a new simple Seed framework
+func NewSeedCreationFramework(cfg *SeedCreationConfig) *SeedCreationFramework {
 	var gardenerConfig *GardenerConfig
 	if cfg != nil {
 		gardenerConfig = cfg.GardenerConfig
 	}
 
-	f := &SeedFramework{
+	f := &SeedCreationFramework{
 		GardenerFramework: NewGardenerFrameworkFromConfig(gardenerConfig),
 		TestDescription:   NewTestDescription("SEED"),
 		Config:            cfg,
@@ -75,14 +80,14 @@ func NewSeedCreationFramework(cfg *SeedCreationConfig) *SeedFramework {
 	return f
 }
 
-// NewSeedFrameworkFromConfig creates a new seed framework from a seed configuration without registering ginkgo
+// NewSeedCreationFrameworkFromConfig creates a new seed framework from a seed configuration without registering ginkgo
 // specific functions
-func NewSeedFrameworkFromConfig(cfg *SeedCreationConfig) (*SeedFramework, error) {
+func NewSeedCreationFrameworkFromConfig(cfg *SeedCreationConfig) (*SeedCreationFramework, error) {
 	var gardenerConfig *GardenerConfig
 	if cfg != nil {
 		gardenerConfig = cfg.GardenerConfig
 	}
-	f := &SeedFramework{
+	f := &SeedCreationFramework{
 		GardenerFramework: NewGardenerFrameworkFromConfig(gardenerConfig),
 		TestDescription:   NewTestDescription("SEED"),
 		Config:            cfg,
@@ -94,23 +99,18 @@ func NewSeedFrameworkFromConfig(cfg *SeedCreationConfig) (*SeedFramework, error)
 }
 
 // BeforeEach should be called in ginkgo's BeforeEach.
-// It sets up the shoot framework.
-func (f *SeedFramework) BeforeEach(ctx context.Context) {
+// It sets up the seed framework.
+func (f *SeedCreationFramework) BeforeEach(ctx context.Context) {
 	f.Config = mergeSeedConfig(f.Config, seedCreationConfig)
 	validateSeedConfig(f.Config)
-	//err := f.AddShoot(ctx, f.Config.SeedName, f.ProjectNamespace)
-	//1. create secret
-	//2. create seed
-	//f.CreateSeed(ctx)
 }
 
 // AfterEach should be called in ginkgo's AfterEach.
 // Cleans up resources and dumps the shoot state if the test failed
-func (f *SeedFramework) AfterEach(ctx context.Context) {
+func (f *SeedCreationFramework) AfterEach(ctx context.Context) {
 	if ginkgo.CurrentGinkgoTestDescription().Failed {
 		f.DumpState(ctx)
 	}
-	//check result
 }
 
 func validateSeedConfig(cfg *SeedCreationConfig) {
@@ -123,6 +123,7 @@ func validateSeedConfig(cfg *SeedCreationConfig) {
 	if !StringSet(cfg.IngressDomain) {
 		ginkgo.Fail("You should specify a SeedName to test against")
 	}
+	//TODO
 }
 
 func mergeSeedConfig(base, overwrite *SeedCreationConfig) *SeedCreationConfig {
@@ -132,7 +133,6 @@ func mergeSeedConfig(base, overwrite *SeedCreationConfig) *SeedCreationConfig {
 	if overwrite == nil {
 		return base
 	}
-
 	if overwrite.GardenerConfig != nil {
 		base.GardenerConfig = overwrite.GardenerConfig
 	}
@@ -154,6 +154,15 @@ func mergeSeedConfig(base, overwrite *SeedCreationConfig) *SeedCreationConfig {
 	if StringSet(overwrite.NewSecretNamespace) {
 		base.NewSecretNamespace = overwrite.NewSecretNamespace
 	}
+	if StringSet(overwrite.BackupSecretName) {
+		base.BackupSecretName = overwrite.BackupSecretName
+	}
+	if StringSet(overwrite.BackupSecretNamespace) {
+		base.BackupSecretNamespace = overwrite.BackupSecretNamespace
+	}
+	if StringSet(overwrite.BackupSecretProvider) {
+		base.BackupSecretProvider = overwrite.BackupSecretProvider
+	}
 	if StringSet(overwrite.ShootedSeedName) {
 		base.ShootedSeedName = overwrite.ShootedSeedName
 	}
@@ -163,31 +172,45 @@ func mergeSeedConfig(base, overwrite *SeedCreationConfig) *SeedCreationConfig {
 	if StringSet(overwrite.ShootedSeedKubeconfig) {
 		base.ShootedSeedKubeconfig = overwrite.ShootedSeedKubeconfig
 	}
+	if StringSet(overwrite.Provider) {
+		base.Provider = overwrite.Provider
+	}
+	if StringSet(overwrite.ProviderType) {
+		base.ProviderType = overwrite.ProviderType
+	}
 	return base
 }
 
-// RegisterSeedFrameworkFlags adds all flags that are needed to configure a shoot framework to the provided flagset.
-func RegisterSeedFrameworkFlags() *SeedCreationConfig {
+// RegisterSeedCreationFrameworkFlags adds all flags that are needed to configure a shoot framework to the provided flagset.
+func RegisterSeedCreationFrameworkFlags() *SeedCreationConfig {
 	_ = RegisterGardenerFrameworkFlags()
 
 	newCfg := &SeedCreationConfig{}
 
 	flag.StringVar(&newCfg.SeedName, "seed-name", "", "name of the seed")
 	flag.StringVar(&newCfg.IngressDomain, "ingress-domain", "", "ingress domain")
+	//Secrets
 	flag.StringVar(&newCfg.SecretRefName, "secret-ref-name", "", "name of the secret reference")
 	flag.StringVar(&newCfg.SecretRefNamespace, "secret-ref-namespace", "", "namespace of the secret reference")
 	flag.StringVar(&newCfg.NewSecretName, "new-secret-name", "", "name of the new secret reference")
 	flag.StringVar(&newCfg.NewSecretNamespace, "new-secret-namespace", "", "namespace of the new secret reference")
+	flag.StringVar(&newCfg.BackupSecretName, "backup-secret-name", "", "name of the backup secret reference")
+	flag.StringVar(&newCfg.BackupSecretNamespace, "backup-secret-namespace", "", "namespace of the backup secret reference")
+	flag.StringVar(&newCfg.BackupSecretProvider, "backup-secret-provider", "", "namespace of the backup secret reference")
+	//Shooted seed reference
 	flag.StringVar(&newCfg.ShootedSeedName, "shooted-seed-name", "", "name of the seed")
 	flag.StringVar(&newCfg.ShootedSeedNamespace, "shooted-seed-namespace", "", "name of the seed")
-	flag.StringVar(&newCfg.ShootedSeedKubeconfig, "shooted-seed-kubecfg", "", "kubeconfig of the shooted seed")
+	flag.StringVar(&newCfg.ShootedSeedKubeconfig, "seed-kubecfg", "", "kubeconfig of the shooted seed")
+	//Provider
+	flag.StringVar(&newCfg.ProviderType, "provider-type", "", "provider type e.g. aws, az, gcp")
+	flag.StringVar(&newCfg.Provider, "provider-region", "", "provider region e.g. eu-west-1")
 
 	seedCreationConfig = newCfg
 
 	return seedCreationConfig
 }
 
-func (f *SeedFramework) CreateSeed(ctx context.Context) error {
+func (f *SeedCreationFramework) CreateSeed(ctx context.Context) error {
 	if f.GardenClient == nil {
 		return errors.New("no gardener client is defined")
 	}
@@ -209,35 +232,42 @@ func (f *SeedFramework) CreateSeed(ctx context.Context) error {
 	seed.Labels = make(map[string]string)
 	seed.Labels["gardener.cloud/role"] = "seed"
 
-	//TODO backup props
 	seed.Spec.Backup = &gardencorev1beta1.SeedBackup{}
 	seed.Spec.Backup.SecretRef = corev1.SecretReference{}
-	seed.Spec.Backup.SecretRef.Name = "backup-aws"
-	seed.Spec.Backup.SecretRef.Namespace = "garden"
-	seed.Spec.Backup.Provider = "aws"
+	seed.Spec.Backup.SecretRef.Name = f.Config.BackupSecretName
+	seed.Spec.Backup.SecretRef.Namespace = f.Config.BackupSecretNamespace
+	seed.Spec.Backup.Provider = f.Config.BackupSecretProvider
 
-	//TODO region props
-	seed.Spec.Provider.Region = "eu-west-1"
-	seed.Spec.Provider.Type = "aws"
+	seed.Spec.Provider.Region = f.Config.Provider
+	seed.Spec.Provider.Type = f.Config.ProviderType
 
-	//TODO network
-	nodesDef := "10.222.0.0/16"
+	refShoot := gardencorev1beta1.Shoot{}
+
+	if err = f.GardenClient.DirectClient().Get(ctx, kutil.Key(f.Config.ShootedSeedNamespace, f.Config.ShootedSeedName), &refShoot); err != nil {
+		return err
+	}
+
 	seed.Spec.Networks = gardencorev1beta1.SeedNetworks{}
-	seed.Spec.Networks.BlockCIDRs = []string{"169.254.169.254/32"}
-	seed.Spec.Networks.Nodes = &nodesDef
-	seed.Spec.Networks.Pods = "10.223.128.0/17"
-	seed.Spec.Networks.Services = "10.223.0.0/17"
-	podsDef := "100.96.0.0/11"
+	seed.Spec.Networks.BlockCIDRs = []string{"169.254.169.254/32"}   //Property
+	seed.Spec.Networks.Nodes = refShoot.Spec.Networking.Nodes        // shoot spec.networking.nodes "10.222.0.0/16"
+	seed.Spec.Networks.Pods = *refShoot.Spec.Networking.Pods         // shoot spec.networking.pods "10.223.128.0/17"
+	seed.Spec.Networks.Services = *refShoot.Spec.Networking.Services // spec.networking.services "10.223.0.0/17"
+	podsDef := "100.96.0.0/11"                                       // Property
 	seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{}
 	seed.Spec.Networks.ShootDefaults.Pods = &podsDef
-	servicesDef := "100.64.0.0/13"
+	servicesDef := "100.64.0.0/13" // Property
 	seed.Spec.Networks.ShootDefaults.Services = &servicesDef
 	seed.Spec.Volume = &gardencorev1beta1.SeedVolume{
-		MinimumSize: resource.NewScaledQuantity(20, resource.Giga),
+		MinimumSize: resource.NewScaledQuantity(5, resource.Giga),
+	}
+	seed.Spec.Settings = &gardencorev1beta1.SeedSettings{
+		Scheduling: &gardencorev1beta1.SeedSettingScheduling{
+			Visible: false,
+		},
 	}
 
 	f.Seed = seed
-	err = f.CreateSeedSecret(ctx)
+	err = f.GenerateSeedSecret(ctx)
 
 	fmt.Println("=====Seed configuration:")
 	PrettyPrintObject(f.Secret)
@@ -247,12 +277,12 @@ func (f *SeedFramework) CreateSeed(ctx context.Context) error {
 	//Apply secret to the cluster
 	_, err = f.createSeedSecret(ctx, f.Secret)
 	//Apply the seed
-	f.GardenerFramework.CreateSeed(ctx, f.Seed)
+	//f.GardenerFramework.CreateSeed(ctx, f.Seed)
 
 	return err
 }
 
-func (f *SeedFramework) createSeedSecret(ctx context.Context, secret *corev1.Secret) (*corev1.Secret, error) {
+func (f *SeedCreationFramework) createSeedSecret(ctx context.Context, secret *corev1.Secret) (*corev1.Secret, error) {
 	_, err := f.GetSecret(ctx, secret.Name, secret.Namespace)
 	if err == nil {
 		return secret, apierrors.NewAlreadyExists(gardencorev1beta1.Resource("secret"), secret.Name)
@@ -265,16 +295,6 @@ func (f *SeedFramework) createSeedSecret(ctx context.Context, secret *corev1.Sec
 		return nil, err
 	}
 	f.Logger.Infof("Secret resource %s was created!", secret.Name)
-	return secret, nil
-}
-
-// GetSecret returns the seed and its k8s client
-func (f *GardenerFramework) GetSecret(ctx context.Context, seedName, seedNamespace string) (*corev1.Secret, error) {
-	secret := &corev1.Secret{}
-	err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seedName, Namespace: seedNamespace}, secret)
-	if err != nil {
-		return nil, err
-	}
 	return secret, nil
 }
 
@@ -300,7 +320,7 @@ func (f *GardenerFramework) checkIfSeedExists(ctx context.Context, seed *gardenc
 	return f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seed.Name}, seed)
 }
 
-// CreateShoot Creates a shoot from a shoot Object and waits until it is successfully reconciled
+// CreateShoot Creates a shoot from a seed Object and waits until it is successfully reconciled
 func (f *GardenerFramework) CreateSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		_, err = f.createSeedResource(ctx, seed)
@@ -323,65 +343,37 @@ func (f *GardenerFramework) CreateSeed(ctx context.Context, seed *gardencorev1be
 		return err
 	}
 
-	f.Logger.Infof("Shoot %s was created!", seed.Name)
+	f.Logger.Infof("Seed %s was created!", seed.Name)
 	return nil
 }
 
-// WaitForShootToBeCreated waits for the shoot to be created
-func (f *GardenerFramework) WaitForSeedToBeCreated(ctx context.Context, seed *gardencorev1beta1.Seed) error {
-	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
-		newSeed := &gardencorev1beta1.Seed{}
-		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seed.Name}, newSeed)
-		if err != nil {
-			f.Logger.Infof("Error while waiting for seed to be created: %s", err.Error())
-			return retry.MinorError(err)
-		}
-		*seed = *newSeed
-		completed, msg := SeedCreationCompleted(seed)
-		if completed {
-			return retry.Ok()
-		}
-		f.Logger.Infof("Shoot %s not yet created successfully (%s)", seed.Name, msg)
-
-		return retry.MinorError(fmt.Errorf("shoot %q was not successfully reconciled", seed.Name))
-	})
-}
-
-// ShootCreationCompleted checks if a shoot is successfully reconciled. In case it is not, it also returns a descriptive message stating the reason.
-func SeedCreationCompleted(newSeed *gardencorev1beta1.Seed) (bool, string) {
-	if newSeed.Generation != newSeed.Status.ObservedGeneration {
-		return false, "shoot generation did not equal observed generation"
-	}
-	if len(newSeed.Status.Conditions) == 0 {
-		return false, "no conditions and last operation present yet"
-	}
-
-	for _, condition := range newSeed.Status.Conditions {
-		if condition.Status != gardencorev1beta1.ConditionTrue && condition.Reason != "BootstrappingSucceeded" {
-			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)
-		}
-	}
-	return true, ""
-}
-
-func (f *SeedFramework) CreateSeedSecret(ctx context.Context) (e error) {
+func (f *SeedCreationFramework) GenerateSeedSecret(ctx context.Context) (e error) {
 	var (
-		secret     = corev1.Secret{}
-		refSecret  = corev1.Secret{}
-		kubeconfig []byte
+		secret        = corev1.Secret{}
+		refSecret     = corev1.Secret{}
+		kubecfgSecret = corev1.Secret{}
+		kubeconfig    []byte
 	)
+
+	if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: f.Config.ShootedSeedNamespace, Name: f.Config.ShootedSeedName + ".kubeconfig"}, &kubecfgSecret); err != nil {
+		fmt.Println("Unable to get kubeconfig from secret", err)
+		kcfg, err := getBytesFromFile(f.Config.ShootedSeedKubeconfig)
+		if err != nil {
+			e = errors.Wrapf(err, "could not get shoot kubeconfig")
+		}
+		kubeconfig = kcfg
+	} else {
+		fmt.Println("Kubecfg succesfully fetched from secret")
+		kcfg, ex := kubecfgSecret.Data[kubeconfigString]
+		if !ex {
+			return err
+		}
+		kubeconfig = kcfg
+	}
 
 	if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: f.Config.SecretRefNamespace, Name: f.Config.SecretRefName}, &refSecret); err != nil {
 		e = errors.Wrapf(err, "could not get shoot kubeconfig secret")
 	}
-
-	//kubeconfig, err := getKubeconfigAsBase64(f.Config.ShootedSeedKubeconfig)
-	kubeconfig, err := getBytesFromFile(f.Config.ShootedSeedKubeconfig)
-	if err != nil {
-		e = errors.Wrapf(err, "could not get shoot kubeconfig from file path")
-	}
-
-	//fmt.Println(string(kubeconfig))
 
 	secret.Name = f.Config.NewSecretName
 	secret.Namespace = f.Config.NewSecretNamespace
@@ -395,14 +387,6 @@ func (f *SeedFramework) CreateSeedSecret(ctx context.Context) (e error) {
 	f.Secret = &secret
 
 	return e
-}
-
-func getKubeconfigAsBase64(filePath string) (b64 []byte, err error) {
-	content, err := getBytesFromFile(filePath)
-
-	// Convert []byte to string and print to screen
-	b64 = []byte(base64.StdEncoding.EncodeToString(content))
-	return b64, err
 }
 
 func getBytesFromFile(filePath string) (b64 []byte, err error) {

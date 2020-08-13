@@ -40,7 +40,7 @@ const (
 )
 
 func init() {
-	framework.RegisterSeedFrameworkFlags()
+	framework.RegisterSeedCreationFrameworkFlags()
 }
 
 var _ = Describe("Seed Creation testing", func() {

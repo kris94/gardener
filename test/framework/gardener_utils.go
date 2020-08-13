@@ -75,6 +75,16 @@ func (f *GardenerFramework) GetShoot(ctx context.Context, shoot *gardencorev1bet
 	return f.GardenClient.DirectClient().Get(ctx, kutil.Key(shoot.Namespace, shoot.Name), shoot)
 }
 
+// GetSecret gets secret by givven name and namespace or retruns error if it does not exist
+func (f *GardenerFramework) GetSecret(ctx context.Context, secretName, secretNamespace string) (*corev1.Secret, error) {
+	secret := &corev1.Secret{}
+	err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: secretName, Namespace: secretNamespace}, secret)
+	if err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
+
 // GetShootProject returns the project of a shoot
 func (f *GardenerFramework) GetShootProject(ctx context.Context, shootNamespace string) (*gardencorev1beta1.Project, error) {
 	var (
@@ -575,4 +585,41 @@ func ScaleGardenerScheduler(setupContextTimeout time.Duration, client client.Cli
 // ScaleGardenerControllerManager scales the gardener-controller-manager to the desired replicas
 func ScaleGardenerControllerManager(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
 	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager", gardencorev1beta1constants.GardenNamespace)
+}
+
+// WaitForShootToBeCreated waits for the shoot to be created
+func (f *GardenerFramework) WaitForSeedToBeCreated(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
+		newSeed := &gardencorev1beta1.Seed{}
+		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seed.Name}, newSeed)
+		if err != nil {
+			f.Logger.Infof("Error while waiting for seed to be created: %s", err.Error())
+			return retry.MinorError(err)
+		}
+		*seed = *newSeed
+		completed, msg := SeedCreationCompleted(seed)
+		if completed {
+			return retry.Ok()
+		}
+		f.Logger.Infof("Seed %s not yet created successfully (%s)", seed.Name, msg)
+
+		return retry.MinorError(fmt.Errorf("seed %q was not successfully reconciled", seed.Name))
+	})
+}
+
+// SeedreationCompleted checks if a seed is successfully reconciled. In case it is not, it also returns a descriptive message stating the reason.
+func SeedCreationCompleted(newSeed *gardencorev1beta1.Seed) (bool, string) {
+	if newSeed.Generation != newSeed.Status.ObservedGeneration {
+		return false, "seed generation did not equal observed generation"
+	}
+	if len(newSeed.Status.Conditions) == 0 {
+		return false, "no conditions and last operation present yet"
+	}
+
+	for _, condition := range newSeed.Status.Conditions {
+		if condition.Status != gardencorev1beta1.ConditionTrue && condition.Reason != "BootstrappingSucceeded" {
+			return false, fmt.Sprintf("condition type %s is not true yet, had message %s with reason %s", condition.Type, condition.Message, condition.Reason)
+		}
+	}
+	return true, ""
 }

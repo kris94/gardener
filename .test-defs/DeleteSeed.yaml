@@ -1,17 +1,17 @@
 kind: TestDefinition
 metadata:
-  name: delete-shoot
+  name: delete-seed
 spec:
   owner: gardener-oq@listserv.sap.com
-  description: Tests the deletion of a shoot.
+  description: Tests the deletion of a seed.
   activeDeadlineSeconds: 3600
 
   command: [bash, -c]
   args:
   - >-
-    go test -timeout=0 -mod=vendor ./test/system/shoot_deletion
+    go test -timeout=0 -mod=vendor ./test/system/seed_deletion
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
-    --seed-name=$SHOOT_NAME
+    --seed-name=$SEED_NAME
     --project-namespace=$PROJECT_NAMESPACE
     --kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
 

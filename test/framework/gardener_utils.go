@@ -647,22 +647,13 @@ func (f *GardenerFramework) DeleteSeedAndWaitForDeletion(ctx context.Context, se
 		return err
 	}
 
-	f.Logger.Infof("Shoot %s was deleted successfully!", seed.Name)
+	f.Logger.Infof("Seed %s was deleted successfully!", seed.Name)
 	return nil
 }
 
 // DeleteSeed deletes the test seed
 func (f *GardenerFramework) DeleteSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		// err = f.RemoveShootAnnotation(seed, common.ShootIgnore)
-		// if err != nil {
-		// 	return retry.MinorError(err)
-		// }
-
-		// First we annotate the shoot to be deleted.
-		// err = f.AnnotateShoot(seed, map[string]string{
-		// 	common.ConfirmationDeletion: "true",
-		// })
 		if err != nil {
 			return retry.MinorError(err)
 		}

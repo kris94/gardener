@@ -85,6 +85,17 @@ func (f *GardenerFramework) GetSecret(ctx context.Context, secretName, secretNam
 	return secret, nil
 }
 
+// DeleteSecret deletes secret by givven name and namespace or retruns error if fails for some reason
+func (f *GardenerFramework) DeleteSecret(ctx context.Context, secretName, secretNamespace string) error {
+	secret := &corev1.Secret{}
+	secret, err := f.GetSecret(ctx, secretName, secretNamespace)
+	if err != nil {
+		return err
+	}
+	err = f.GardenClient.DirectClient().Delete(ctx, secret)
+	return err
+}
+
 // GetShootProject returns the project of a shoot
 func (f *GardenerFramework) GetShootProject(ctx context.Context, shootNamespace string) (*gardencorev1beta1.Project, error) {
 	var (
@@ -622,4 +633,66 @@ func SeedCreationCompleted(newSeed *gardencorev1beta1.Seed) (bool, string) {
 		}
 	}
 	return true, ""
+}
+
+// DeleteSeedAndWaitForDeletion deletes the test seed and waits until it cannot be found any more
+func (f *GardenerFramework) DeleteSeedAndWaitForDeletion(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	err := f.DeleteSeed(ctx, seed)
+	if err != nil {
+		return err
+	}
+
+	err = f.WaitForSeedToBeDeleted(ctx, seed)
+	if err != nil {
+		return err
+	}
+
+	f.Logger.Infof("Shoot %s was deleted successfully!", seed.Name)
+	return nil
+}
+
+// DeleteSeed deletes the test seed
+func (f *GardenerFramework) DeleteSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		// err = f.RemoveShootAnnotation(seed, common.ShootIgnore)
+		// if err != nil {
+		// 	return retry.MinorError(err)
+		// }
+
+		// First we annotate the shoot to be deleted.
+		// err = f.AnnotateShoot(seed, map[string]string{
+		// 	common.ConfirmationDeletion: "true",
+		// })
+		if err != nil {
+			return retry.MinorError(err)
+		}
+
+		err = f.GardenClient.DirectClient().Delete(ctx, seed)
+		if err != nil {
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// WaitForSeedToBeDeleted waits for the seed to be deleted
+func (f *GardenerFramework) WaitForSeedToBeDeleted(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {
+		updatedSeed := &gardencorev1beta1.Seed{}
+		err = f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seed.Name}, updatedSeed)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.Ok()
+			}
+			f.Logger.Infof("Error while waiting for seed to be deleted: %s", err.Error())
+			return retry.MinorError(err)
+		}
+		*seed = *updatedSeed
+		f.Logger.Infof("waiting for seed %s to be deleted", seed.Name)
+		return retry.MinorError(fmt.Errorf("seed %q still exists", seed.Name))
+	})
 }

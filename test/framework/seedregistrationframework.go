@@ -252,10 +252,10 @@ func (f *SeedCreationFramework) CreateSeed(ctx context.Context) error {
 	seed.Spec.Networks.Nodes = refShoot.Spec.Networking.Nodes        // shoot spec.networking.nodes "10.222.0.0/16"
 	seed.Spec.Networks.Pods = *refShoot.Spec.Networking.Pods         // shoot spec.networking.pods "10.223.128.0/17"
 	seed.Spec.Networks.Services = *refShoot.Spec.Networking.Services // spec.networking.services "10.223.0.0/17"
-	podsDef := "100.96.0.0/11"                                       // Property
+	podsDef := "10.96.0.0/16"                                        // Property
 	seed.Spec.Networks.ShootDefaults = &gardencorev1beta1.ShootNetworks{}
 	seed.Spec.Networks.ShootDefaults.Pods = &podsDef
-	servicesDef := "100.64.0.0/13" // Property
+	servicesDef := "10.64.0.0/17" // Property
 	seed.Spec.Networks.ShootDefaults.Services = &servicesDef
 	seed.Spec.Volume = &gardencorev1beta1.SeedVolume{
 		MinimumSize: resource.NewScaledQuantity(5, resource.Giga),
@@ -277,7 +277,7 @@ func (f *SeedCreationFramework) CreateSeed(ctx context.Context) error {
 	//Apply secret to the cluster
 	_, err = f.createSeedSecret(ctx, f.Secret)
 	//Apply the seed
-	//f.GardenerFramework.CreateSeed(ctx, f.Seed)
+	f.GardenerFramework.CreateSeed(ctx, f.Seed)
 
 	return err
 }

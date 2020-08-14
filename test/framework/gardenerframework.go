@@ -158,3 +158,14 @@ func (f *GardenerFramework) NewShootFramework(shoot *gardencorev1beta1.Shoot) (*
 	}
 	return shootFramework, nil
 }
+
+// NewSeedFramework creates a new seed framework with the current gardener framework
+func (f *GardenerFramework) NewSeedFramework(seed *gardencorev1beta1.Seed) (*SeedCreationFramework, error) {
+	seedFramework := &SeedCreationFramework{
+		GardenerFramework: f,
+		Config: &SeedCreationConfig{
+			GardenerConfig: f.GardenerFrameworkConfig,
+		},
+	}
+	return seedFramework, nil
+}

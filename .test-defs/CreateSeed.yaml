@@ -3,7 +3,7 @@ metadata:
   name: create-shoot
 spec:
   owner: gardener-oq@listserv.sap.com
-  description: Tests the creation of a shoot.
+  description: Tests the creation of a seed.
   activeDeadlineSeconds: 7200
 
   command: [bash, -c]
@@ -11,19 +11,23 @@ spec:
   - >-
     go test -timeout=0 -mod=vendor ./test/system/shoot_creation
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
-    -kubecfg=$SHOOT_KUBECONFIG \
-    -seed-name=$SEED_NAME \
-    -ingress-domain=$INGRESS_DOMAIN \
-    -secret-ref-name=$SECRET_REF_NAME \
-    -secret-ref-namespace=$SECRET_REF_NAMESPACE \
-    -new-secret-name=$NEW_SECRET_NAME \
-    -new-secret-namespace=$NEW_SECRET_NAMESPACE \
-    -shooted-seed-name=$SHOOTED_SEED_NAME \
-    -shooted-seed-namespace=$SHOOTED_SEED_NAMESPACE \
-    -shooted-seed-kubecfg=$SHOOTED_SEED_KCFG
-#    -machine-image-name=$MACHINE_IMAGE
-#    -machine-image-version=$MACHINE_IMAGE_VERSION
-#    -machine-type=$MACHINE_TYPE
-#    -external-domain=
+   -kubecfg=$SHOOT_KUBECONFIG \
+   -seed-name=$SEED_NAME \
+   -ingress-domain=$INGRESS_DOMAIN \
+   -secret-ref-name=$SECRET_REF_NAME\
+   -secret-ref-namespace=$SECRET_REF_NAMESPACE \
+   -new-secret-name=$NEW_SECRET_NAME \
+   -new-secret-namespace=$NEW_SECRET_NAMESPACE \
+   -backup-secret-name=$BACKUP_SECRET_NAME \
+   -backup-secret-namespace=$BACKUP_SECRET_NAMESPACE \
+   -backup-secret-provider=$BACKUP_SECRET_PROVIDER \
+   -shooted-seed-name=$SHOOTED_SEED_NAME \
+   -shooted-seed-namespace=$SHOOTED_SEED_NAMESPACE \
+   -seed-kubecfg=$SHOOTED_SEED_KCFG \
+   -provider-type=$PROVIDER_TYPE \
+   -provider-region=$PROVIDER_REGION \
+   -network-default-services=$NETWORK_DEFAULT_SERVICES \
+   -network-default-pods=$NETWORK_DEFAULT_PODS \
+   -network-blockcidrs=$NETWORK_BLOCKCIDRS \
 
   image: golang:1.13.4

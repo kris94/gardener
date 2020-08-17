@@ -120,28 +120,22 @@ func validateSeedConfig(cfg *SeedCreationConfig) {
 		ginkgo.Fail("no shoot framework configuration provided")
 	}
 	if !StringSet(cfg.SeedName) {
-		ginkgo.Fail("You should specify a SeedName to test against")
+		ginkgo.Fail("You should specify a name for the new Seed")
 	}
 	if !StringSet(cfg.IngressDomain) {
-		ginkgo.Fail("You should specify a SeedName to test against")
+		ginkgo.Fail("You should specify a IngressDomain")
 	}
 	if !StringSet(cfg.SecretRefName) {
-		ginkgo.Fail("You should specify a SeedName to test against")
+		ginkgo.Fail("You should specify a name for the reference secret which fields will be copied")
 	}
 	if !StringSet(cfg.SecretRefNamespace) {
-		ginkgo.Fail("You should specify a SeedName to test against")
+		ginkgo.Fail("You should specify a namespace for the reference secret which fields will be copied")
 	}
 	if !StringSet(cfg.NewSecretName) {
-		ginkgo.Fail("You should specify a SeedName to test against")
+		ginkgo.Fail("You should specify a name for the new secret that will be created")
 	}
 	if !StringSet(cfg.NewSecretNamespace) {
-		ginkgo.Fail("You should specify a SeedName to test against")
-	}
-	if !StringSet(cfg.BackupSecretName) {
-		ginkgo.Fail("You should specify a SeedName to test against")
-	}
-	if !StringSet(cfg.BackupSecretNamespace) {
-		ginkgo.Fail("You should specify a SeedName to test against")
+		ginkgo.Fail("You should specify a namespace for the new secret that will be created")
 	}
 	if !StringSet(cfg.ShootedSeedName) && !StringSet(cfg.ShootedSeedNamespace) {
 		ginkgo.Fail("You should specify Shooted Seed name and namespace to test against")

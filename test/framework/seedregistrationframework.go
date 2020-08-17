@@ -17,7 +17,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -59,7 +58,6 @@ type SeedCreationConfig struct {
 	NetworkDefServices    string
 	NetworkDefPods        string
 	BlockCIDRs            string
-	SeedScheme            *runtime.Scheme
 }
 
 // NewSeedCreationFramework creates a new simple Seed framework
@@ -127,7 +125,30 @@ func validateSeedConfig(cfg *SeedCreationConfig) {
 	if !StringSet(cfg.IngressDomain) {
 		ginkgo.Fail("You should specify a SeedName to test against")
 	}
-	//TODO
+	if !StringSet(cfg.SecretRefName) {
+		ginkgo.Fail("You should specify a SeedName to test against")
+	}
+	if !StringSet(cfg.SecretRefNamespace) {
+		ginkgo.Fail("You should specify a SeedName to test against")
+	}
+	if !StringSet(cfg.NewSecretName) {
+		ginkgo.Fail("You should specify a SeedName to test against")
+	}
+	if !StringSet(cfg.NewSecretNamespace) {
+		ginkgo.Fail("You should specify a SeedName to test against")
+	}
+	if !StringSet(cfg.BackupSecretName) {
+		ginkgo.Fail("You should specify a SeedName to test against")
+	}
+	if !StringSet(cfg.BackupSecretNamespace) {
+		ginkgo.Fail("You should specify a SeedName to test against")
+	}
+	if !StringSet(cfg.ShootedSeedName) && !StringSet(cfg.ShootedSeedNamespace) {
+		ginkgo.Fail("You should specify Shooted Seed name and namespace to test against")
+	}
+	if !StringSet(cfg.Provider) && !StringSet(cfg.ProviderType) {
+		ginkgo.Fail("You should specify a Provider and Provider type")
+	}
 }
 
 func mergeSeedConfig(base, overwrite *SeedCreationConfig) *SeedCreationConfig {

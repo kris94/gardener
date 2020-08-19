@@ -11,7 +11,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -218,17 +217,17 @@ func RegisterSeedCreationFrameworkFlags() *SeedCreationConfig {
 	flag.StringVar(&newCfg.SeedName, "seed-name", "", "name of the seed")
 	flag.StringVar(&newCfg.IngressDomain, "ingress-domain", "", "ingress domain")
 	//Secrets
-	flag.StringVar(&newCfg.SecretRefName, "secret-ref-name", "", "name of the secret reference")
-	flag.StringVar(&newCfg.SecretRefNamespace, "secret-ref-namespace", "", "namespace of the secret reference")
-	flag.StringVar(&newCfg.NewSecretName, "new-secret-name", "", "name of the new secret reference")
-	flag.StringVar(&newCfg.NewSecretNamespace, "new-secret-namespace", "", "namespace of the new secret reference")
+	flag.StringVar(&newCfg.SecretRefName, "existing-seed-secret-ref-name", "", "name of the secret reference")
+	flag.StringVar(&newCfg.SecretRefNamespace, "existing-seed-secret-ref-name-namespace", "", "namespace of the secret reference")
+	flag.StringVar(&newCfg.NewSecretName, "seed-secret-name", "", "name of the new secret reference")
+	flag.StringVar(&newCfg.NewSecretNamespace, "seed-secret-namespace", "", "namespace of the new secret reference")
 	flag.StringVar(&newCfg.BackupSecretName, "backup-secret-name", "", "name of the backup secret reference")
 	flag.StringVar(&newCfg.BackupSecretNamespace, "backup-secret-namespace", "", "namespace of the backup secret reference")
 	flag.StringVar(&newCfg.BackupSecretProvider, "backup-secret-provider", "", "namespace of the backup secret reference")
 	//Shooted seed reference
-	flag.StringVar(&newCfg.ShootedSeedName, "shooted-seed-name", "", "name of the seed")
-	flag.StringVar(&newCfg.ShootedSeedNamespace, "shooted-seed-namespace", "", "name of the seed")
-	flag.StringVar(&newCfg.ShootedSeedKubeconfig, "seed-kubecfg", "", "kubeconfig of the shooted seed")
+	flag.StringVar(&newCfg.ShootedSeedName, "shoot-name", "", "name of the seed")
+	flag.StringVar(&newCfg.ShootedSeedNamespace, "shoot-namespace", "", "name of the seed")
+	flag.StringVar(&newCfg.ShootedSeedKubeconfig, "shoot-kubecfg", "", "kubeconfig of the shooted seed")
 	//Provider
 	flag.StringVar(&newCfg.ProviderType, "provider-type", "", "provider type e.g. aws, az, gcp")
 	flag.StringVar(&newCfg.Provider, "provider-region", "", "provider region e.g. eu-west-1")
@@ -307,75 +306,26 @@ func (f *SeedCreationFramework) CreateSeed(ctx context.Context) error {
 	PrettyPrintObject(seed)
 
 	//Apply secret to the cluster
-	_, err = f.createSeedSecret(ctx, f.Secret)
+	err = f.createSeedSecret(ctx, f.Secret)
 	//Apply the seed
 	err = f.GardenerFramework.CreateSeed(ctx, f.Seed)
 
 	return err
 }
 
-func (f *SeedCreationFramework) createSeedSecret(ctx context.Context, secret *corev1.Secret) (*corev1.Secret, error) {
-	_, err := f.GetSecret(ctx, secret.Name, secret.Namespace)
+func (f *SeedCreationFramework) createSeedSecret(ctx context.Context, secret *corev1.Secret) error {
+	err := f.GetSecret(ctx, secret.Name, secret.Namespace, secret)
 	if err == nil {
-		return secret, apierrors.NewAlreadyExists(gardencorev1beta1.Resource("secret"), secret.Name)
+		return apierrors.NewAlreadyExists(gardencorev1beta1.Resource("secret"), secret.Name)
 	}
 	if !apierrors.IsNotFound(err) {
-		return nil, err
+		return err
 	}
 
 	if err := f.GardenClient.DirectClient().Create(ctx, secret); err != nil {
-		return nil, err
+		return err
 	}
 	f.Logger.Infof("Secret resource %s was created!", secret.Name)
-	return secret, nil
-}
-
-// createShootResource creates a shoot from a shoot Object
-func (f *GardenerFramework) createSeedResource(ctx context.Context, seed *gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
-	err := f.checkIfSeedExists(ctx, seed)
-	if err == nil {
-		return seed, apierrors.NewAlreadyExists(gardencorev1beta1.Resource("seed"), seed.Name)
-	}
-	if !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-
-	if err := f.GardenClient.DirectClient().Create(ctx, seed); err != nil {
-		f.Logger.Errorf("Failed to create SEED: ", err)
-		return nil, err
-	}
-	f.Logger.Infof("Seed resource %s was created!", seed.Name)
-	return seed, nil
-}
-
-func (f *GardenerFramework) checkIfSeedExists(ctx context.Context, seed *gardencorev1beta1.Seed) error {
-	return f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seed.Name}, seed)
-}
-
-// CreateShoot Creates a shoot from a seed Object and waits until it is successfully reconciled
-func (f *GardenerFramework) CreateSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
-	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		_, err = f.createSeedResource(ctx, seed)
-		if apierrors.IsInvalid(err) || apierrors.IsForbidden(err) || apierrors.IsAlreadyExists(err) {
-			return retry.SevereError(err)
-		}
-		if err != nil {
-			f.Logger.Debugf("unable to create seed %s: %s", seed.Name, err.Error())
-			return retry.MinorError(err)
-		}
-		return retry.Ok()
-	})
-	if err != nil {
-		return err
-	}
-
-	// Then we wait for the shoot to be created
-	err = f.WaitForSeedToBeCreated(ctx, seed)
-	if err != nil {
-		return err
-	}
-
-	f.Logger.Infof("Seed %s was created!", seed.Name)
 	return nil
 }
 
@@ -387,21 +337,16 @@ func (f *SeedCreationFramework) GenerateSeedSecret(ctx context.Context) (e error
 		kubeconfig    []byte
 	)
 
-	if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: f.Config.ShootedSeedNamespace, Name: f.Config.ShootedSeedName + ".kubeconfig"}, &kubecfgSecret); err != nil {
+	if err := f.GetSecret(ctx, f.Config.ShootedSeedName+".kubeconfig", f.Config.ShootedSeedNamespace, &kubecfgSecret); err != nil {
 		fmt.Println("Unable to get kubeconfig from secret", err)
-		kcfg, err := getBytesFromFile(f.Config.ShootedSeedKubeconfig)
-		if err != nil {
-			e = errors.Wrapf(err, "could not get shoot kubeconfig")
-		}
-		kubeconfig = kcfg
-	} else {
-		fmt.Println("Kubecfg succesfully fetched from secret")
-		kcfg, ex := kubecfgSecret.Data[kubeconfigString]
-		if !ex {
-			return err
-		}
-		kubeconfig = kcfg
+		return err
 	}
+	fmt.Println("Kubecfg succesfully fetched from secret")
+	kcfg, ex := kubecfgSecret.Data[kubeconfigString]
+	if !ex {
+		return errors.New("Can`t get kubeconfig from the givven parameters")
+	}
+	kubeconfig = kcfg
 
 	if err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Namespace: f.Config.SecretRefNamespace, Name: f.Config.SecretRefName}, &refSecret); err != nil {
 		e = errors.Wrapf(err, "could not get shoot kubeconfig secret")

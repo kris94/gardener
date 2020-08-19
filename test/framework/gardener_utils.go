@@ -76,19 +76,18 @@ func (f *GardenerFramework) GetShoot(ctx context.Context, shoot *gardencorev1bet
 }
 
 // GetSecret gets secret by givven name and namespace or retruns error if it does not exist
-func (f *GardenerFramework) GetSecret(ctx context.Context, secretName, secretNamespace string) (*corev1.Secret, error) {
-	secret := &corev1.Secret{}
+func (f *GardenerFramework) GetSecret(ctx context.Context, secretName, secretNamespace string, secret *corev1.Secret) error {
 	err := f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: secretName, Namespace: secretNamespace}, secret)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return secret, nil
+	return nil
 }
 
 // DeleteSecret deletes secret by givven name and namespace or retruns error if fails for some reason
 func (f *GardenerFramework) DeleteSecret(ctx context.Context, secretName, secretNamespace string) error {
 	secret := &corev1.Secret{}
-	secret, err := f.GetSecret(ctx, secretName, secretNamespace)
+	err := f.GetSecret(ctx, secretName, secretNamespace, secret)
 	if err != nil {
 		return err
 	}
@@ -596,6 +595,55 @@ func ScaleGardenerScheduler(setupContextTimeout time.Duration, client client.Cli
 // ScaleGardenerControllerManager scales the gardener-controller-manager to the desired replicas
 func ScaleGardenerControllerManager(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
 	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager", gardencorev1beta1constants.GardenNamespace)
+}
+
+// CreateShoot Creates a shoot from a seed Object and waits until it is successfully reconciled
+func (f *GardenerFramework) CreateSeed(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		_, err = f.createSeedResource(ctx, seed)
+		if apierrors.IsInvalid(err) || apierrors.IsForbidden(err) || apierrors.IsAlreadyExists(err) {
+			return retry.SevereError(err)
+		}
+		if err != nil {
+			f.Logger.Debugf("unable to create seed %s: %s", seed.Name, err.Error())
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	})
+	if err != nil {
+		return err
+	}
+
+	// Then we wait for the shoot to be created
+	err = f.WaitForSeedToBeCreated(ctx, seed)
+	if err != nil {
+		return err
+	}
+
+	f.Logger.Infof("Seed %s was created!", seed.Name)
+	return nil
+}
+
+// createShootResource creates a shoot from a shoot Object
+func (f *GardenerFramework) createSeedResource(ctx context.Context, seed *gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {
+	err := f.checkIfSeedExists(ctx, seed)
+	if err == nil {
+		return seed, apierrors.NewAlreadyExists(gardencorev1beta1.Resource("seed"), seed.Name)
+	}
+	if !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err := f.GardenClient.DirectClient().Create(ctx, seed); err != nil {
+		f.Logger.Errorf("Failed to create SEED: ", err)
+		return nil, err
+	}
+	f.Logger.Infof("Seed resource %s was created!", seed.Name)
+	return seed, nil
+}
+
+func (f *GardenerFramework) checkIfSeedExists(ctx context.Context, seed *gardencorev1beta1.Seed) error {
+	return f.GardenClient.DirectClient().Get(ctx, client.ObjectKey{Name: seed.Name}, seed)
 }
 
 // WaitForShootToBeCreated waits for the shoot to be created

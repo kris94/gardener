@@ -315,6 +315,25 @@ func (f *GardenerFramework) ScheduleShoot(ctx context.Context, shoot *gardencore
 	return f.GardenClient.DirectClient().Update(ctx, shoot)
 }
 
+// Change the spec.Seed.Name of a shoot and wait for it to be migrated
+func (f *GardenerFramework) MigrateShoot(ctx context.Context, shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed) error {
+	if err := f.UpdateShoot(ctx, shoot, func(shoot *gardencorev1beta1.Shoot) error {
+		if err := f.GetShoot(ctx, shoot); err != nil {
+			return err
+		}
+
+		if _, _, err := f.GetSeed(ctx, seed.Name); err != nil {
+			return err
+		}
+
+		shoot.Spec.SeedName = &seed.Name
+		return nil
+	}); err != nil {
+		return err
+	}
+	return f.WaitForShootToBeCreated(ctx, shoot)
+}
+
 // WaitForShootToBeCreated waits for the shoot to be created
 func (f *GardenerFramework) WaitForShootToBeCreated(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
 	return retry.UntilTimeout(ctx, 30*time.Second, 60*time.Minute, func(ctx context.Context) (done bool, err error) {

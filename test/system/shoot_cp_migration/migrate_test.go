@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/test/framework"
-
+	"github.com/gardener/gardener/test/framework/cp_migration"
 	. "github.com/onsi/ginkgo"
 )
 
@@ -35,12 +35,12 @@ const (
 )
 
 func init() {
-	framework.RegisterShootMigrationFrameworkFlags()
+	cp_migration.RegisterShootMigrationTestFlags()
 }
 
 var _ = Describe("Shoot migration testing", func() {
 
-	f := framework.NewShootMigrationFramework(&framework.ShootMigrationConfig{
+	f := cp_migration.NewShootMigrationTest(&cp_migration.ShootMigrationConfig{
 		GardenerConfig: &framework.GardenerConfig{
 			CommonConfig: &framework.CommonConfig{
 				ResourceDir: "../../framework/resources",

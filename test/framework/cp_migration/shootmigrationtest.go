@@ -1,4 +1,4 @@
-package framework
+package cp_migration
 
 import (
 	"context"
@@ -10,6 +10,8 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	framework "github.com/gardener/gardener/test/framework"
+	"github.com/gardener/gardener/test/framework/applications"
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -29,24 +31,27 @@ const (
 	ServiceAccountNamespace = "default"
 )
 
-// SeedCreationFramework represents the seed test framework that includes
+// ShootMigrationTest represents the seed test framework that includes
 // test functions that can be executed ona specific seed
-type ShootMigrationFramework struct {
-	*GardenerFramework
-	TestDescription
-	Config             *ShootMigrationConfig
-	TargetSeedClient   kubernetes.Interface
-	SourceSeedClient   kubernetes.Interface
-	ShootClient        kubernetes.Interface
-	TargetSeed         *gardencorev1beta1.Seed
-	SourceSeed         *gardencorev1beta1.Seed
-	ComparisonElements ShootComparisonElemets
-	Shoot              gardencorev1beta1.Shoot
+type ShootMigrationTest struct {
+	*framework.GardenerFramework
+	framework.TestDescription
+	Config                            *ShootMigrationConfig
+	TargetSeedClient                  kubernetes.Interface
+	SourceSeedClient                  kubernetes.Interface
+	ShootClient                       kubernetes.Interface
+	TargetSeed                        *gardencorev1beta1.Seed
+	SourceSeed                        *gardencorev1beta1.Seed
+	ComparisonElementsBeforeMigration ShootComparisonElemets
+	ComparisonElementsAfterMigration  ShootComparisonElemets
+	Shoot                             gardencorev1beta1.Shoot
+	SeedShootNamespace                string
+	GuestBookApp                      *applications.GuestBookTest
 }
 
-// SeedCreationConfig is the configuration for a seed framework that will be filled with user provided data
+// ShootMigrationConfig is the configuration for a seed framework that will be filled with user provided data
 type ShootMigrationConfig struct {
-	GardenerConfig *GardenerConfig
+	GardenerConfig *framework.GardenerConfig
 	TargetSeedName string
 	SourceSeedName string
 	ShootName      string
@@ -54,47 +59,44 @@ type ShootMigrationConfig struct {
 }
 
 type ShootComparisonElemets struct {
-	MachineNamesBeforeMigration []string
-	NodeNamesBeforeMigration    []string
-	MachineNamesAfterMigration  []string
-	MachineNodesAfterMigration  []string
-	NodeNamesAfterMigration     []string
-	PodStatusBeforeMigration    map[string]corev1.PodPhase
-	PodStatusAfterMigration     map[string]corev1.PodPhase
+	MachineNames []string
+	MachineNodes []string
+	NodeNames    []string
+	PodStatus    map[string]corev1.PodPhase
 }
 
-// NewSeedCreationFramework creates a new simple Seed framework
-func NewShootMigrationFramework(cfg *ShootMigrationConfig) *ShootMigrationFramework {
-	var gardenerConfig *GardenerConfig
+// NewShootMigrationTest creates a new simple shoot migration test
+func NewShootMigrationTest(cfg *ShootMigrationConfig) *ShootMigrationTest {
+	var gardenerConfig *framework.GardenerConfig
 	if cfg != nil {
 		gardenerConfig = cfg.GardenerConfig
 	}
 
-	f := &ShootMigrationFramework{
-		GardenerFramework: NewGardenerFrameworkFromConfig(gardenerConfig),
-		TestDescription:   NewTestDescription("Shoot Migration"),
+	f := &ShootMigrationTest{
+		GardenerFramework: framework.NewGardenerFrameworkFromConfig(gardenerConfig),
+		TestDescription:   framework.NewTestDescription("Shoot Migration"),
 		Config:            cfg,
 	}
 
-	CBeforeEach(func(ctx context.Context) {
+	framework.CBeforeEach(func(ctx context.Context) {
 		f.CommonFramework.BeforeEach()
 		f.GardenerFramework.BeforeEach()
 		f.BeforeEach(ctx)
 	}, 8*time.Minute)
-	CAfterEach(f.AfterEach, 10*time.Minute)
+	framework.CAfterEach(f.AfterEach, 10*time.Minute)
 	return f
 }
 
-// NewSeedCreationFrameworkFromConfig creates a new seed framework from a seed configuration without registering ginkgo
+// NewShootMigrationTestFromConfig creates a new shoot cp migration test from a configuration without registering ginkgo
 // specific functions
-func NewShootMigrationFrameworkFromConfig(cfg *ShootMigrationConfig) (*ShootMigrationFramework, error) {
-	var gardenerConfig *GardenerConfig
+func NewShootMigrationTestFromConfig(cfg *ShootMigrationConfig) (*ShootMigrationTest, error) {
+	var gardenerConfig *framework.GardenerConfig
 	if cfg != nil {
 		gardenerConfig = cfg.GardenerConfig
 	}
-	f := &ShootMigrationFramework{
-		GardenerFramework: NewGardenerFrameworkFromConfig(gardenerConfig),
-		TestDescription:   NewTestDescription("SEED"),
+	f := &ShootMigrationTest{
+		GardenerFramework: framework.NewGardenerFrameworkFromConfig(gardenerConfig),
+		TestDescription:   framework.NewTestDescription("SEED"),
 		Config:            cfg,
 	}
 	return f, nil
@@ -102,16 +104,18 @@ func NewShootMigrationFrameworkFromConfig(cfg *ShootMigrationConfig) (*ShootMigr
 
 // BeforeEach should be called in ginkgo's BeforeEach.
 // It sets up the seed framework.
-func (f *ShootMigrationFramework) BeforeEach(ctx context.Context) {
+func (f *ShootMigrationTest) BeforeEach(ctx context.Context) {
 	f.Config = mergeConfig(f.Config, shootMigrationConfig)
 	validateConfig(f.Config)
 	if err := f.initShoot(ctx); err != nil {
 		ginkgo.Fail(err.Error())
 	}
+	f.SeedShootNamespace = framework.ComputeTechnicalID(f.Config.GardenerConfig.ProjectNamespace, &f.Shoot)
+
 	if err := f.initSeedsAndClients(ctx); err != nil {
 		ginkgo.Fail(err.Error())
 	}
-	f.ComparisonElements = ShootComparisonElemets{}
+	f.ComparisonElementsBeforeMigration = ShootComparisonElemets{}
 	if err := f.populateBeforeMigrationComparisonElements(ctx); err != nil {
 		ginkgo.Fail(err.Error())
 	}
@@ -121,16 +125,22 @@ func (f *ShootMigrationFramework) BeforeEach(ctx context.Context) {
 	if err := f.createTestServiceAccount(ctx); err != nil {
 		ginkgo.Fail(err.Error())
 	}
+	guesbookApp, err := f.deployGuestBookAp(ctx)
+	if err != nil {
+		ginkgo.Fail(err.Error())
+	}
+	guesbookApp.Test(ctx)
+	f.GuestBookApp = guesbookApp
 	podStatusMap, err := f.getPodsStatus(ctx)
 	if err != nil {
 		ginkgo.Fail(err.Error())
 	}
-	f.ComparisonElements.PodStatusBeforeMigration = podStatusMap
+	f.ComparisonElementsBeforeMigration.PodStatus = podStatusMap
 }
 
 // AfterEach should be called in ginkgo's AfterEach.
 // Cleans up resources and dumps the shoot state if the test failed
-func (f *ShootMigrationFramework) AfterEach(ctx context.Context) {
+func (f *ShootMigrationTest) AfterEach(ctx context.Context) {
 	if ginkgo.CurrentGinkgoTestDescription().Failed {
 		f.DumpState(ctx)
 	}
@@ -148,23 +158,25 @@ func (f *ShootMigrationFramework) AfterEach(ctx context.Context) {
 	if err != nil {
 		ginkgo.Fail(err.Error())
 	}
-	f.ComparisonElements.PodStatusAfterMigration = podStatusMap
+	f.ComparisonElementsAfterMigration.PodStatus = podStatusMap
 	if err := f.compareElementsAfterMigration(); err != nil {
 		ginkgo.Fail(err.Error())
 	}
+	f.GuestBookApp.Test(ctx)
+	f.GuestBookApp.Cleanup(ctx)
 }
 
 func validateConfig(cfg *ShootMigrationConfig) {
 	if cfg == nil {
 		ginkgo.Fail("no shoot framework configuration provided")
 	}
-	if !StringSet(cfg.TargetSeedName) {
+	if !framework.StringSet(cfg.TargetSeedName) {
 		ginkgo.Fail("You should specify a name for the new Seed")
 	}
-	if !StringSet(cfg.ShootName) {
+	if !framework.StringSet(cfg.ShootName) {
 		ginkgo.Fail("You should specify a name for the new Shoot")
 	}
-	if !StringSet(cfg.ShootNamespace) {
+	if !framework.StringSet(cfg.ShootNamespace) {
 		ginkgo.Fail("You should specify a namespace for the new Shoot")
 	}
 }
@@ -179,21 +191,21 @@ func mergeConfig(base, overwrite *ShootMigrationConfig) *ShootMigrationConfig {
 	if overwrite.GardenerConfig != nil {
 		base.GardenerConfig = overwrite.GardenerConfig
 	}
-	if StringSet(overwrite.TargetSeedName) {
+	if framework.StringSet(overwrite.TargetSeedName) {
 		base.TargetSeedName = overwrite.TargetSeedName
 	}
-	if StringSet(overwrite.ShootName) {
+	if framework.StringSet(overwrite.ShootName) {
 		base.ShootName = overwrite.ShootName
 	}
-	if StringSet(overwrite.ShootNamespace) {
+	if framework.StringSet(overwrite.ShootNamespace) {
 		base.ShootNamespace = overwrite.ShootNamespace
 	}
 	return base
 }
 
 // RegisterSeedCreationFrameworkFlags adds all flags that are needed to configure a shoot framework to the provided flagset.
-func RegisterShootMigrationFrameworkFlags() *SeedCreationConfig {
-	_ = RegisterGardenerFrameworkFlags()
+func RegisterShootMigrationTestFlags() *ShootMigrationConfig {
+	_ = framework.RegisterGardenerFrameworkFlags()
 
 	newCfg := &ShootMigrationConfig{}
 
@@ -203,10 +215,10 @@ func RegisterShootMigrationFrameworkFlags() *SeedCreationConfig {
 
 	shootMigrationConfig = newCfg
 
-	return seedCreationConfig
+	return shootMigrationConfig
 }
 
-func (f *ShootMigrationFramework) MigrateShoot(ctx context.Context) error {
+func (f *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 	// Dump gardener state if delete shoot is in exit handler
 	if os.Getenv("TM_PHASE") == "Exit" {
 		if seedFramework, err := f.NewShootFramework(&f.Shoot); err == nil {
@@ -224,9 +236,10 @@ func (f *ShootMigrationFramework) MigrateShoot(ctx context.Context) error {
 	return nil
 }
 
-func (f *ShootMigrationFramework) getNodeNames(ctx context.Context, seedClient kubernetes.Interface) (nodeNames []string, err error) {
+func (f *ShootMigrationTest) getNodeNames(ctx context.Context, seedClient kubernetes.Interface) (nodeNames []string, err error) {
 	nodeList := v1.NodeList{}
-	if err := seedClient.Client().List(ctx, &nodeList, client.InNamespace("shoot--"+f.Config.ShootNamespace+"--"+f.Config.ShootName)); err != nil {
+	f.Logger.Infof("Getting node names in namespace: %s", f.SeedShootNamespace)
+	if err := seedClient.Client().List(ctx, &nodeList, client.InNamespace(f.SeedShootNamespace)); err != nil {
 		return nil, err
 	}
 
@@ -239,13 +252,18 @@ func (f *ShootMigrationFramework) getNodeNames(ctx context.Context, seedClient k
 	return
 }
 
-func (f *ShootMigrationFramework) getMachineDetails(ctx context.Context, seedClient kubernetes.Interface) (machineNames, machineNodes []string, err error) {
+func (f *ShootMigrationTest) getMachineDetails(ctx context.Context, seedClient kubernetes.Interface) (machineNames, machineNodes []string, err error) {
+	//machineList := machinev1alpha1.MachineList{} // time="2020-09-11T17:33:32+03:00" level=error msg="Error while getting machine details, no kind is registered for the type v1alpha1.MachineList in scheme \"github.com/gardener/gardener/pkg/client/kubernetes/types.go:51\""
 	machineList := unstructured.UnstructuredList{}
-	machineList.SetKind("Machine")
 	machineList.SetAPIVersion("machine.sapcloud.io/v1alpha1")
-	if err := seedClient.Client().List(ctx, &machineList, client.InNamespace("shoot--"+f.Config.ShootNamespace+"--"+f.Config.ShootName)); err != nil {
+	machineList.SetKind("Machine")
+	f.Logger.Infof("Getting machine details in namespace: %s", f.SeedShootNamespace)
+	if err := seedClient.Client().List(ctx, &machineList, client.InNamespace(f.SeedShootNamespace)); err != nil {
+		f.Logger.Errorf("Error while getting machine details, %s", err.Error())
 		return nil, nil, err
 	}
+
+	f.Logger.Infof("Found: %d items", len(machineList.Items))
 
 	machineNames = make([]string, len(machineList.Items))
 	machineNodes = make([]string, len(machineList.Items))
@@ -259,7 +277,7 @@ func (f *ShootMigrationFramework) getMachineDetails(ctx context.Context, seedCli
 	return
 }
 
-func (f *ShootMigrationFramework) initShoot(ctx context.Context) (err error) {
+func (f *ShootMigrationTest) initShoot(ctx context.Context) (err error) {
 	shoot := &gardencorev1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Name: f.Config.ShootName, Namespace: f.Config.ShootNamespace}}
 	err = f.GardenerFramework.GetShoot(ctx, shoot)
 
@@ -276,7 +294,7 @@ func (f *ShootMigrationFramework) initShoot(ctx context.Context) (err error) {
 	return
 }
 
-func (f *ShootMigrationFramework) initSeedsAndClients(ctx context.Context) error {
+func (f *ShootMigrationTest) initSeedsAndClients(ctx context.Context) error {
 	f.Config.SourceSeedName = *f.Shoot.Spec.SeedName
 
 	if seed, seedClient, err := f.GetSeed(ctx, f.Config.TargetSeedName); err != nil {
@@ -295,46 +313,44 @@ func (f *ShootMigrationFramework) initSeedsAndClients(ctx context.Context) error
 	return nil
 }
 
-func (f *ShootMigrationFramework) populateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
-	f.ComparisonElements.MachineNamesBeforeMigration, _, err = f.getMachineDetails(ctx, f.SourceSeedClient)
-	f.ComparisonElements.NodeNamesBeforeMigration, err = f.getNodeNames(ctx, f.ShootClient)
+func (f *ShootMigrationTest) populateBeforeMigrationComparisonElements(ctx context.Context) (err error) {
+	f.ComparisonElementsBeforeMigration.MachineNames, _, err = f.getMachineDetails(ctx, f.SourceSeedClient)
+	f.ComparisonElementsBeforeMigration.NodeNames, err = f.getNodeNames(ctx, f.ShootClient)
 	return
 }
 
-func (f *ShootMigrationFramework) populateAfterMigrationComparisonElements(ctx context.Context) (err error) {
-	f.ComparisonElements.MachineNamesAfterMigration, f.ComparisonElements.MachineNodesAfterMigration, err = f.getMachineDetails(ctx, f.TargetSeedClient)
-	f.ComparisonElements.NodeNamesAfterMigration, err = f.getNodeNames(ctx, f.ShootClient)
+func (f *ShootMigrationTest) populateAfterMigrationComparisonElements(ctx context.Context) (err error) {
+	f.ComparisonElementsAfterMigration.MachineNames, f.ComparisonElementsAfterMigration.MachineNodes, err = f.getMachineDetails(ctx, f.TargetSeedClient)
+	f.ComparisonElementsAfterMigration.NodeNames, err = f.getNodeNames(ctx, f.ShootClient)
 	return
 }
 
-func (f *ShootMigrationFramework) compareElementsAfterMigration() error {
-	if !reflect.DeepEqual(f.ComparisonElements.MachineNamesBeforeMigration, f.ComparisonElements.MachineNamesAfterMigration) {
-		return errors.Errorf("Initial Machines %v, does not match after-migrate Machines %v", f.ComparisonElements.MachineNamesBeforeMigration, f.ComparisonElements.MachineNamesAfterMigration)
+func (f *ShootMigrationTest) compareElementsAfterMigration() error {
+	if !reflect.DeepEqual(f.ComparisonElementsBeforeMigration.MachineNames, f.ComparisonElementsAfterMigration.MachineNames) {
+		return errors.Errorf("Initial Machines %v, does not match after-migrate Machines %v", f.ComparisonElementsBeforeMigration.MachineNames, f.ComparisonElementsAfterMigration.MachineNames)
 	}
-	if !reflect.DeepEqual(f.ComparisonElements.NodeNamesBeforeMigration, f.ComparisonElements.NodeNamesAfterMigration) {
-		return errors.Errorf("Initial Nodes %v, does not match after-migrate Nodes %v", f.ComparisonElements.NodeNamesBeforeMigration, f.ComparisonElements.NodeNamesAfterMigration)
+	if !reflect.DeepEqual(f.ComparisonElementsBeforeMigration.NodeNames, f.ComparisonElementsAfterMigration.NodeNames) {
+		return errors.Errorf("Initial Nodes %v, does not match after-migrate Nodes %v", f.ComparisonElementsBeforeMigration.NodeNames, f.ComparisonElementsAfterMigration.NodeNames)
 	}
-	if !reflect.DeepEqual(f.ComparisonElements.MachineNodesAfterMigration, f.ComparisonElements.NodeNamesAfterMigration) {
-		return errors.Errorf("Machine nodes (label) %v, does not match after-migrate Nodes %v", f.ComparisonElements.MachineNodesAfterMigration, f.ComparisonElements.NodeNamesAfterMigration)
+	if !reflect.DeepEqual(f.ComparisonElementsAfterMigration.MachineNodes, f.ComparisonElementsAfterMigration.NodeNames) {
+		return errors.Errorf("Machine nodes (label) %v, does not match after-migrate Nodes %v", f.ComparisonElementsAfterMigration.MachineNodes, f.ComparisonElementsAfterMigration.NodeNames)
 	}
-	if !reflect.DeepEqual(f.ComparisonElements.PodStatusBeforeMigration, f.ComparisonElements.PodStatusAfterMigration) {
-		return errors.Errorf("Pod status before-migration %v, does not match after-migration Pods %v", f.ComparisonElements.MachineNodesAfterMigration, f.ComparisonElements.NodeNamesAfterMigration)
+	if !reflect.DeepEqual(f.ComparisonElementsBeforeMigration.PodStatus, f.ComparisonElementsAfterMigration.PodStatus) {
+		return errors.Errorf("Pod status before-migration %v, does not match after-migration Pods %v", f.ComparisonElementsBeforeMigration.PodStatus, f.ComparisonElementsAfterMigration.PodStatus)
 	}
 	return nil
 }
 
-func (f *ShootMigrationFramework) checkPodsStatus(ctx context.Context) error {
-
-	return nil
-}
-
-func (f *ShootMigrationFramework) createTestSecret(ctx context.Context) error {
+func (f *ShootMigrationTest) createTestSecret(ctx context.Context) error {
 	var secret = &corev1.Secret{}
 
 	err := f.ShootClient.DirectClient().Get(ctx, client.ObjectKey{Name: SecretName, Namespace: SecretNamespace}, secret)
 
 	if err == nil {
-		return apierrors.NewAlreadyExists(gardencorev1beta1.Resource("secret"), SecretName)
+		f.Logger.Warnf("Secret %s/%s already exists. It will be deleted and recreated...", SecretNamespace, SecretName)
+		if err = f.deleteTestSecret(ctx); err != nil {
+			return err
+		}
 	}
 	if !apierrors.IsNotFound(err) {
 		return err
@@ -349,7 +365,7 @@ func (f *ShootMigrationFramework) createTestSecret(ctx context.Context) error {
 	return nil
 }
 
-func (f *ShootMigrationFramework) deleteTestSecret(ctx context.Context) error {
+func (f *ShootMigrationTest) deleteTestSecret(ctx context.Context) error {
 	var secret = &corev1.Secret{}
 	if err := f.ShootClient.DirectClient().Get(ctx, client.ObjectKey{Name: SecretName, Namespace: SecretNamespace}, secret); err != nil {
 		return err
@@ -362,12 +378,15 @@ func (f *ShootMigrationFramework) deleteTestSecret(ctx context.Context) error {
 	return nil
 }
 
-func (f *ShootMigrationFramework) createTestServiceAccount(ctx context.Context) error {
+func (f *ShootMigrationTest) createTestServiceAccount(ctx context.Context) error {
 	var serviceAccount = &corev1.ServiceAccount{}
 
 	err := f.ShootClient.DirectClient().Get(ctx, client.ObjectKey{Name: ServiceAccountName, Namespace: ServiceAccountNamespace}, serviceAccount)
 	if err == nil {
-		return apierrors.NewAlreadyExists(gardencorev1beta1.Resource("serviceaccount"), ServiceAccountName)
+		f.Logger.Warnf("Service Account %s/%s already exists. It will be deleted and recreated...", SecretNamespace, SecretName)
+		if err = f.deleteTestServiceAccount(ctx); err != nil {
+			return err
+		}
 	}
 	if !apierrors.IsNotFound(err) {
 		return err
@@ -382,7 +401,7 @@ func (f *ShootMigrationFramework) createTestServiceAccount(ctx context.Context) 
 	return nil
 }
 
-func (f *ShootMigrationFramework) deleteTestServiceAccount(ctx context.Context) error {
+func (f *ShootMigrationTest) deleteTestServiceAccount(ctx context.Context) error {
 	var serviceAccount = &corev1.ServiceAccount{}
 
 	if err := f.ShootClient.DirectClient().Get(ctx, client.ObjectKey{Name: ServiceAccountName, Namespace: ServiceAccountNamespace}, serviceAccount); err != nil {
@@ -395,7 +414,7 @@ func (f *ShootMigrationFramework) deleteTestServiceAccount(ctx context.Context) 
 	f.Logger.Infof("ServiceAccount %s was deleted!", ServiceAccountName)
 	return nil
 }
-func (f *ShootMigrationFramework) getPodsStatus(ctx context.Context) (map[string]corev1.PodPhase, error) {
+func (f *ShootMigrationTest) getPodsStatus(ctx context.Context) (map[string]corev1.PodPhase, error) {
 	podList := corev1.PodList{}
 	if err := f.ShootClient.Client().List(ctx, &podList, client.InNamespace(corev1.NamespaceAll)); err != nil {
 		return nil, err
@@ -406,4 +425,34 @@ func (f *ShootMigrationFramework) getPodsStatus(ctx context.Context) (map[string
 		podStatusMap[pod.Namespace+"/"+pod.Name] = pod.Status.Phase
 	}
 	return podStatusMap, nil
+}
+
+func (f *ShootMigrationTest) deployGuestBookAp(ctx context.Context) (*applications.GuestBookTest, error) {
+	sFramework := framework.ShootFramework{
+		GardenerFramework: f.GardenerFramework,
+		TestDescription:   f.TestDescription,
+		Shoot:             &f.Shoot,
+		Seed:              f.SourceSeed,
+		ShootClient:       f.ShootClient,
+		SeedClient:        f.SourceSeedClient,
+	}
+	if f.Shoot.Spec.Addons.NginxIngress.Enabled == false {
+		if err := f.UpdateShoot(ctx, &f.Shoot, func(shoot *gardencorev1beta1.Shoot) error {
+			if err := f.GetShoot(ctx, shoot); err != nil {
+				return err
+			}
+
+			shoot.Spec.Addons.NginxIngress.Enabled = true
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	guestbookApp, err := applications.NewGuestBookTest(&sFramework)
+	if err != nil {
+		return nil, err
+	}
+	guestbookApp.DeployGuestBookApp(ctx)
+	return guestbookApp, nil
 }
